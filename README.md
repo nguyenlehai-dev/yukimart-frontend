@@ -50,3 +50,4 @@ Dev server tự động proxy `/api/*` → `http://localhost:8000` (Laravel back
 - Chạy `npm install` sau mỗi lần pull
 - File `node_modules/` KHÔNG commit vào Git
 - Env variables đặt trong `.env.local` (không commit)
+# CI/CD Test - Wed Mar 18 03:01:58 PM +07 2026
