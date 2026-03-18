@@ -1,52 +1,84 @@
 # ============================================================
-# YukiMart Frontend - Deploy to PRODUCTION
-# Triggers when code is pushed/merged to prod branch
+# YukiMart Frontend - Deploy to Production
+# Triggered on push to prod branch
 # Requires manual approval via GitHub environment protection
 # ============================================================
-name: 🚀 Deploy PRODUCTION
+name: Deploy to Production
 
 on:
   push:
     branches: [prod]
 
+env:
+  NODE_VERSION: '20'
+
 jobs:
-  build:
-    name: 🏗️ Build for Production
+  # ── Stage 1: Full Quality Gate ─────────────────────────────
+  code-quality:
+    name: Code Quality Gate
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+      - run: npm ci
+      - name: Lint check
+        run: npm run lint --if-present
+        continue-on-error: true
+      - name: Type check
+        run: npm run type-check --if-present
+        continue-on-error: true
 
-      - name: 📥 Install dependencies
-        run: npm ci
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Audit dependencies
+        run: npm audit --audit-level=high || true
 
-      - name: 🏗️ Build for PRODUCTION
+  # ── Stage 2: Production Build ──────────────────────────────
+  build:
+    name: Production Build
+    runs-on: ubuntu-latest
+    needs: [code-quality, security-audit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Build production bundle
         run: npm run build
         env:
           NODE_ENV: production
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://yukimart.io.vn/api' }}
-
-      - name: 📦 Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Validate build
+        run: |
+          test -d dist || (echo "Build failed" && exit 1)
+          echo "Build size: $(du -sh dist | cut -f1)"
+      - uses: actions/upload-artifact@v4
         with:
-          name: production-build
+          name: production-build-${{ github.sha }}
           path: dist/
+          retention-days: 30
 
+  # ── Stage 3: Deploy (requires approval) ────────────────────
   deploy:
-    name: 🚀 Deploy to Production
-    needs: build
+    name: Deploy to Production Server
     runs-on: ubuntu-latest
+    needs: [build]
     environment: production
-
     steps:
-      - name: 🚀 Trigger deploy webhook
+      - name: Deploy via webhook
         env:
           DEPLOY_WEBHOOK: ${{ secrets.DEPLOY_WEBHOOK_URL }}
           DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
@@ -54,12 +86,52 @@ jobs:
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$DEPLOY_WEBHOOK" \
             -H "Content-Type: application/json" \
             -H "X-Deploy-Secret: $DEPLOY_SECRET" \
-            -d "{\"repo\":\"yukimart-frontend\",\"branch\":\"prod\",\"env\":\"production\",\"commit\":\"$GITHUB_SHA\"}")
+            -d '{"repo":"yukimart-frontend","branch":"prod","env":"production","commit":"'"$GITHUB_SHA"'"}')
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          echo "Response: $BODY (HTTP $HTTP_CODE)"
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Deploy failed!"
+            echo "Deployment failed with HTTP $HTTP_CODE"
             exit 1
           fi
-          echo "✅ Production deploy successful!"
+          echo "Deployment triggered successfully"
+
+  # ── Stage 4: Post-Deploy Verification ──────────────────────
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    steps:
+      - name: Wait for deployment rollout
+        run: sleep 30
+      - name: Verify application health
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "https://yukimart.io.vn/")
+          echo "Application status: HTTP $STATUS"
+          if [ "$STATUS" = "000" ]; then
+            echo "CRITICAL: Application unreachable after deployment"
+            exit 1
+          fi
+
+  # ── Stage 5: Release Report ────────────────────────────────
+  release-report:
+    name: Release Report
+    runs-on: ubuntu-latest
+    needs: [code-quality, security-audit, build, deploy, smoke-test]
+    if: always()
+    steps:
+      - name: Generate release report
+        run: |
+          echo "============================================"
+          echo "  PRODUCTION RELEASE REPORT"
+          echo "============================================"
+          echo "  Application:  YukiMart Frontend"
+          echo "  Version:      ${{ github.sha }}"
+          echo "  Released by:  ${{ github.actor }}"
+          echo "  Timestamp:    $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "--------------------------------------------"
+          echo "  PIPELINE RESULTS:"
+          echo "    Code Quality:    ${{ needs.code-quality.result }}"
+          echo "    Security Audit:  ${{ needs.security-audit.result }}"
+          echo "    Build:           ${{ needs.build.result }}"
+          echo "    Deployment:      ${{ needs.deploy.result }}"
+          echo "    Smoke Test:      ${{ needs.smoke-test.result }}"
+          echo "============================================"

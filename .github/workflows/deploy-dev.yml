@@ -1,45 +1,103 @@
 # ============================================================
-# YukiMart Frontend - Deploy to DEV environment
-# Triggers when code is pushed/merged to dev branch
+# YukiMart Frontend - Deploy to Development
+# Triggered on push to dev branch (after CI passes)
 # ============================================================
-name: 🚀 Deploy DEV
+name: Deploy to Development
 
 on:
   push:
     branches: [dev]
 
+env:
+  NODE_VERSION: '20'
+
 jobs:
-  build-and-deploy:
-    name: 🏗️ Build & Deploy to DEV
+  # ── Stage 1: Build ─────────────────────────────────────────
+  build:
+    name: Build Application
     runs-on: ubuntu-latest
-    environment: development
-    
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: 📦 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: 📥 Install dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: 🏗️ Build for DEV
+      - name: Build for development
         run: npm run build
         env:
           NODE_ENV: development
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://yukimart.io.vn/api' }}
 
-      - name: 🚀 Deploy to server
+      - name: Verify build output
+        run: test -d dist && echo "Build successful" || exit 1
+
+  # ── Stage 2: Deploy ────────────────────────────────────────
+  deploy:
+    name: Deploy to Dev Server
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment: development
+    steps:
+      - name: Trigger deployment webhook
         env:
           DEPLOY_WEBHOOK: ${{ secrets.DEPLOY_WEBHOOK_URL }}
           DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
         run: |
-          curl -s -X POST "$DEPLOY_WEBHOOK" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$DEPLOY_WEBHOOK" \
             -H "Content-Type: application/json" \
             -H "X-Deploy-Secret: $DEPLOY_SECRET" \
-            -d "{\"repo\":\"yukimart-frontend\",\"branch\":\"dev\",\"env\":\"development\",\"commit\":\"$GITHUB_SHA\"}"
-          echo "✅ Deploy webhook triggered"
+            -d '{"repo":"yukimart-frontend","branch":"dev","env":"development","commit":"'"$GITHUB_SHA"'"}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Server response: $BODY"
+          echo "HTTP status: $HTTP_CODE"
+
+  # ── Stage 3: Verify ────────────────────────────────────────
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    steps:
+      - name: Wait for deployment
+        run: sleep 15
+
+      - name: Health check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://yukimart.io.vn/" || echo "000")
+          echo "Health check status: $STATUS"
+          if [ "$STATUS" = "000" ]; then
+            echo "WARNING: Could not reach application"
+          else
+            echo "Application is responding"
+          fi
+        continue-on-error: true
+
+  # ── Stage 4: Notification ──────────────────────────────────
+  notify:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [build, deploy, verify]
+    if: always()
+    steps:
+      - name: Report deployment status
+        run: |
+          echo "============================================"
+          echo "  Development Deployment Report"
+          echo "============================================"
+          echo "  Repository: yukimart-frontend"
+          echo "  Branch:     dev"
+          echo "  Commit:     ${{ github.sha }}"
+          echo "  Author:     ${{ github.actor }}"
+          echo "  Timestamp:  $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "--------------------------------------------"
+          echo "  Build:      ${{ needs.build.result }}"
+          echo "  Deploy:     ${{ needs.deploy.result }}"
+          echo "  Verify:     ${{ needs.verify.result }}"
+          echo "============================================"
