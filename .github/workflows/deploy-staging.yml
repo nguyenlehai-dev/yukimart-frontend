@@ -1,0 +1,45 @@
+# ============================================================
+# YukiMart Frontend - Deploy to STAGING environment
+# Triggers when code is pushed/merged to staging branch
+# ============================================================
+name: 🧪 Deploy STAGING
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  build-and-deploy:
+    name: 🏗️ Build & Deploy to STAGING
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build for STAGING
+        run: npm run build
+        env:
+          NODE_ENV: staging
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://yukimart.io.vn/api' }}
+
+      - name: 🚀 Deploy to server
+        env:
+          DEPLOY_WEBHOOK: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        run: |
+          curl -s -X POST "$DEPLOY_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -H "X-Deploy-Secret: $DEPLOY_SECRET" \
+            -d "{\"repo\":\"yukimart-frontend\",\"branch\":\"staging\",\"env\":\"staging\",\"commit\":\"$GITHUB_SHA\"}"
+          echo "✅ Staging deploy webhook triggered"

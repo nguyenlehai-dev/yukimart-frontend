@@ -1,0 +1,65 @@
+# ============================================================
+# YukiMart Frontend - Deploy to PRODUCTION
+# Triggers when code is pushed/merged to prod branch
+# Requires manual approval via GitHub environment protection
+# ============================================================
+name: 🚀 Deploy PRODUCTION
+
+on:
+  push:
+    branches: [prod]
+
+jobs:
+  build:
+    name: 🏗️ Build for Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build for PRODUCTION
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://yukimart.io.vn/api' }}
+
+      - name: 📦 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: dist/
+
+  deploy:
+    name: 🚀 Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: 🚀 Trigger deploy webhook
+        env:
+          DEPLOY_WEBHOOK: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$DEPLOY_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -H "X-Deploy-Secret: $DEPLOY_SECRET" \
+            -d "{\"repo\":\"yukimart-frontend\",\"branch\":\"prod\",\"env\":\"production\",\"commit\":\"$GITHUB_SHA\"}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Response: $BODY (HTTP $HTTP_CODE)"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Deploy failed!"
+            exit 1
+          fi
+          echo "✅ Production deploy successful!"

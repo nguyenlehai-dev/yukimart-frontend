@@ -1,0 +1,45 @@
+# ============================================================
+# YukiMart Frontend - Deploy to DEV environment
+# Triggers when code is pushed/merged to dev branch
+# ============================================================
+name: 🚀 Deploy DEV
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  build-and-deploy:
+    name: 🏗️ Build & Deploy to DEV
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build for DEV
+        run: npm run build
+        env:
+          NODE_ENV: development
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://yukimart.io.vn/api' }}
+
+      - name: 🚀 Deploy to server
+        env:
+          DEPLOY_WEBHOOK: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+        run: |
+          curl -s -X POST "$DEPLOY_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -H "X-Deploy-Secret: $DEPLOY_SECRET" \
+            -d "{\"repo\":\"yukimart-frontend\",\"branch\":\"dev\",\"env\":\"development\",\"commit\":\"$GITHUB_SHA\"}"
+          echo "✅ Deploy webhook triggered"
