@@ -1,17 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useProductStore } from '@/stores/products'
+import { useProductStore } from '../stores/products'
+import { useProductFormat } from '../composables/useProductFormat'
 
 const route = useRoute()
 const store = useProductStore()
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(price)
-}
+const { formatPrice, isInStock } = useProductFormat()
 
 onMounted(() => {
   const id = Number(route.params.id)
@@ -52,7 +47,8 @@ onMounted(() => {
               {{ formatPrice(store.currentProduct.price) }}
             </p>
             <p style="margin-bottom: 1.5rem;">
-              <span style="color: var(--color-success);">✓ Còn hàng</span>
+              <span v-if="isInStock(store.currentProduct.stock)" style="color: var(--color-success);">✓ Còn hàng</span>
+              <span v-else style="color: var(--color-secondary);">✗ Hết hàng</span>
               <span style="color: var(--color-text-muted);"> ({{ store.currentProduct.stock }} sản phẩm)</span>
             </p>
             <button class="btn btn-primary" style="width: 100%;">

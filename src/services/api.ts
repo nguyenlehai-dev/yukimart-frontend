@@ -31,15 +31,7 @@ api.interceptors.response.use(
 
 export default api
 
-// API functions
-export const productApi = {
-  getAll: (params?: Record<string, any>) => api.get('/products', { params }),
-  getById: (id: number) => api.get(`/products/${id}`),
-  create: (data: Record<string, any>) => api.post('/products', data),
-  update: (id: number, data: Record<string, any>) => api.put(`/products/${id}`, data),
-  delete: (id: number) => api.delete(`/products/${id}`),
-}
-
+// Shared API functions (not module-specific)
 export const authApi = {
   login: (data: { email: string; password: string }) => api.post('/auth/login', data),
   register: (data: Record<string, any>) => api.post('/auth/register', data),

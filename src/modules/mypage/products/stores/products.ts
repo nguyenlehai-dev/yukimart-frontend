@@ -1,18 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { productApi } from '@/services/api'
-
-export interface Product {
-  id: number
-  name: string
-  slug: string
-  price: number
-  description: string
-  image: string
-  category: string
-  stock: number
-  created_at: string
-}
+import type { Product, ProductFilter } from '../models/Product'
+import productService from '../services/productService'
 
 export const useProductStore = defineStore('products', () => {
   const products = ref<Product[]>([])
@@ -20,11 +9,11 @@ export const useProductStore = defineStore('products', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchProducts(params?: Record<string, any>) {
+  async function fetchProducts(params?: ProductFilter) {
     loading.value = true
     error.value = null
     try {
-      const response = await productApi.getAll(params)
+      const response = await productService.getAll(params)
       products.value = response.data.data
     } catch (e: any) {
       error.value = e.message || 'Failed to fetch products'
@@ -37,7 +26,7 @@ export const useProductStore = defineStore('products', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await productApi.getById(id)
+      const response = await productService.getById(id)
       currentProduct.value = response.data.data
     } catch (e: any) {
       error.value = e.message || 'Failed to fetch product'
