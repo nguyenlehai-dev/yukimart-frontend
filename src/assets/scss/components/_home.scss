@@ -1,0 +1,44 @@
+@use '../variables' as *;
+
+.ym-home {
+  padding-top: 8px;
+
+  &__hero {
+    margin-bottom: 12px;
+  }
+
+  &__hero-inner {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+}
+
+// ── Responsive ──
+@media (max-width: 1199.98px) {
+  .ym-home__hero-inner {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .ym-home__hero-inner {
+    flex-direction: column;
+
+    .ym-category-sidebar { display: none; }
+    .ym-side-banners {
+      flex-direction: row;
+      width: 100%;
+      min-width: unset;
+    }
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ym-home {
+    padding-top: 4px;
+
+    &__hero { margin-bottom: 6px; }
+    &__hero-inner { gap: 8px; }
+  }
+}

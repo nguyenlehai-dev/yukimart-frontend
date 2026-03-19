@@ -1,0 +1,66 @@
+@use 'variables' as *;
+
+// ── Reset / Base ──
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: $ym-text;
+  background: $ym-bg;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+// ── Custom Scrollbar ──
+// Webkit (Chrome, Safari, Edge)
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba($ym-green, 0);
+  border-radius: 10px;
+  transition: background 0.3s;
+}
+
+// Show scrollbar thumb only on hover/scroll
+*:hover::-webkit-scrollbar-thumb,
+*:active::-webkit-scrollbar-thumb {
+  background: rgba($ym-green, 0.45);
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba($ym-green, 0.7);
+}
+
+// Firefox
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: rgba($ym-green, 0.45) transparent;
+}

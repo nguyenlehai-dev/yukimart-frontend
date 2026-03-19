@@ -1,0 +1,157 @@
+@use '../variables' as *;
+
+// ── Drawer overlay ──
+.ym-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 999;
+}
+
+// ── Drawer panel ──
+.ym-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  max-width: 85vw;
+  height: 100vh;
+  background: #fff;
+  z-index: 1000;
+  overflow-y: auto;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: $ym-green;
+    color: #fff;
+
+    h4 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+    }
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+
+    &:hover { opacity: 0.8; }
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &__item {
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: $ym-text;
+    text-decoration: none;
+    transition: all 0.15s;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background: rgba($ym-green, 0.05);
+      color: $ym-green;
+    }
+
+    &--expanded {
+      background: rgba($ym-green, 0.08);
+      color: $ym-green;
+      font-weight: 600;
+    }
+
+    i {
+      font-size: 16px;
+      color: #ccc;
+    }
+  }
+
+  &__arrow {
+    transition: transform 0.25s ease;
+
+    &--open {
+      transform: rotate(90deg);
+      color: $ym-green;
+    }
+  }
+
+  // ── Submenu accordion ──
+  &__submenu {
+    background: #f8f9fa;
+    border-top: 1px solid #eee;
+    padding: 8px 0;
+  }
+
+  &__sub-group {
+    padding: 0 16px 8px 24px;
+  }
+
+  &__sub-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: $ym-green;
+    margin: 8px 0 4px;
+    text-transform: uppercase;
+  }
+
+  &__sub-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  &__sub-link {
+    display: block;
+    padding: 5px 0;
+    font-size: 12px;
+    color: #666;
+    text-decoration: none;
+    transition: color 0.15s;
+
+    &:hover {
+      color: $ym-green;
+    }
+  }
+}
+
+// ── Transitions ──
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-left-enter-from,
+.slide-left-leave-to {
+  transform: translateX(-100%);
+}

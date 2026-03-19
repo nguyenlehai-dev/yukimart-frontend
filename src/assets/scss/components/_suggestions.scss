@@ -1,0 +1,77 @@
+@use '../variables' as *;
+
+.ym-suggestions {
+  padding: 10px 0 20px;
+  background-color: rgb(245, 251, 246);
+  margin-bottom: 10px;
+
+  &__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #555;
+    text-align: center;
+    text-transform: uppercase;
+    padding: 16px 0;
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    letter-spacing: 0.5px;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to var(--dir, right), #ccc, transparent);
+    }
+
+    &::before { --dir: right; background: linear-gradient(to right, transparent, #ccc); }
+    &::after  { --dir: left;  background: linear-gradient(to left, transparent, #ccc); }
+
+    i {
+      font-size: 16px;
+      color: #999;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    padding-top: 14px;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .ym-suggestions__grid {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    gap: 8px;
+    padding-bottom: 4px;
+
+    &::-webkit-scrollbar { height: 0; }
+    scrollbar-width: none;
+
+    > * {
+      flex: 0 0 28%;
+      min-width: 150px;
+      scroll-snap-align: start;
+    }
+  }
+
+  .ym-suggestions {
+    padding: 8px 0 14px;
+    &__title { font-size: 12px; padding: 12px 0; }
+  }
+}
+
+@media (max-width: 575.98px) {
+  .ym-suggestions__grid > * {
+    flex: 0 0 42%;
+    min-width: 140px;
+  }
+}

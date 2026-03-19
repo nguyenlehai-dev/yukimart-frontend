@@ -1,0 +1,41 @@
+@use '../variables' as *;
+
+.ym-side-banners {
+  width: 200px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__item {
+    display: block;
+    flex: 1;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #eee;
+    transition: transform 0.2s;
+
+    &:hover { transform: scale(1.02); }
+
+    img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+  }
+}
+
+@media (max-width: 991.98px) {
+  .ym-side-banners {
+    flex-direction: row;
+    width: 100%;
+    min-width: unset;
+
+    &__item img { height: 120px; }
+  }
+}
+
+@media (max-width: 575.98px) {
+  .ym-side-banners { display: none; }
+}

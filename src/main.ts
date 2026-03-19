@@ -7,8 +7,13 @@ import pinia from './stores'
 // Plugins
 import { setupI18n } from './plugins/i18n'
 import globalComponents from './plugins/components'
+import { createBootstrap } from 'bootstrap-vue-next'
 
-import './assets/main.css'
+// Styles
+import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap-vue-next/dist/bootstrap-vue-next.css'
+import 'remixicon/fonts/remixicon.css'
+import './assets/scss/main.scss'
 
 const app = createApp(App)
 
@@ -21,7 +26,10 @@ app.use(router)
 // 3. Setup I18n (Localization)
 app.use(setupI18n())
 
-// 4. Register Global Components (Common UI)
+// 4. Bootstrap Vue Next
+app.use(createBootstrap())
+
+// 5. Register Global Components (Common UI)
 app.use(globalComponents)
 
 // Mount app
