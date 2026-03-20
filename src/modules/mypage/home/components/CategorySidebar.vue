@@ -53,14 +53,14 @@ const onClickItem = (item: CategoryMenu, event: Event) => {
         @mouseenter="onMouseEnterItem(item)"
         @mouseleave="onMouseLeaveItem"
       >
-        <a
-          :href="item.link"
+        <RouterLink
+          :to="item.link"
           class="ym-category-sidebar__link"
           @click="item.submenu ? onClickItem(item, $event) : undefined"
         >
           <span class="ym-category-sidebar__name">{{ item.name }}</span>
           <i v-if="item.submenu" class="ri-arrow-right-s-line ym-category-sidebar__arrow"></i>
-        </a>
+        </RouterLink>
       </li>
     </ul>
 

@@ -1,7 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterView, RouterLink } from 'vue-router'
+import { ref, computed } from 'vue'
+import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router'
 import { navLinks, categoryMenuItems } from '../modules/mypage/home/configs'
+import { useCartStore } from '../stores/cart'
+import { useAuthStore } from '../stores/auth'
+import LoginModal from '../components/ui/LoginModal.vue'
+import TrustBadges from '../components/common/TrustBadges.vue'
+import BackToTop from '../components/common/BackToTop.vue'
+import FloatingActions from '../components/common/FloatingActions.vue'
+
+const cartStore = useCartStore()
+const authStore = useAuthStore()
+const router = useRouter()
+const route = useRoute()
+
+const isHomePage = computed(() => route.path === '/')
 
 const expandedItem = ref<number | null>(null)
 
@@ -13,11 +26,44 @@ const toggleSubmenu = (itemId: number, hasSubmenu: boolean) => {
 const showCategoryDrawer = ref(false)
 
 const toggleCategoryDrawer = () => {
-  showCategoryDrawer.value = !showCategoryDrawer.value
+  if (window.innerWidth <= 1199) {
+    showCategoryDrawer.value = !showCategoryDrawer.value
+  }
 }
 
 const closeCategoryDrawer = () => {
   showCategoryDrawer.value = false
+}
+
+// ── Login modal ──
+const showLoginModal = ref(false)
+const loginRedirectTo = ref('')
+
+function openLoginModal(redirect = '') {
+  loginRedirectTo.value = redirect
+  showLoginModal.value = true
+}
+
+function handleCartClick() {
+  if (!authStore.isLoggedIn) {
+    openLoginModal('/cart')
+  } else {
+    router.push('/cart')
+  }
+}
+
+function handleLoginClick() {
+  if (authStore.isLoggedIn) {
+    authStore.logout()
+  } else {
+    openLoginModal('')
+  }
+}
+
+function onLoggedIn() {
+  if (loginRedirectTo.value) {
+    router.push(loginRedirectTo.value)
+  }
 }
 </script>
 
@@ -26,8 +72,10 @@ const closeCategoryDrawer = () => {
     <!-- Top Bar -->
     <div class="ym-topbar">
       <div class="container ym-topbar__inner">
-        <span class="ym-topbar__text">Chào mừng đến với YukiMart! | Miễn phí giao hàng cho đơn từ 500K</span>
-        <span class="ym-topbar__text"><i class="ri-phone-fill"></i> Hotline: 093 373 87 98</span>
+        <div class="ym-topbar__marquee">
+          <span class="ym-topbar__marquee-text">Chào mừng đến với YukiMart! | Miễn phí giao hàng cho đơn từ 500K</span>
+        </div>
+        <span class="ym-topbar__text ym-topbar__hotline"><i class="ri-phone-fill"></i> Hotline: 093 373 87 98</span>
       </div>
     </div>
 
@@ -71,15 +119,22 @@ const closeCategoryDrawer = () => {
             <i class="ri-customer-service-2-line ym-header__action-icon"></i>
             <span class="ym-header__action-text">Hỗ trợ<br/>khách hàng</span>
           </a>
-          <a href="#" class="ym-header__action">
+          <a href="#" class="ym-header__action" @click.prevent="handleCartClick">
             <div class="ym-header__cart-wrap">
               <i class="ri-shopping-bag-line ym-header__action-icon"></i>
-              <span class="ym-header__action-badge">0</span>
+              <span class="ym-header__action-badge" :class="{ 'ym-header__action-badge--active': cartStore.totalItems > 0 }">
+                {{ cartStore.totalItems }}
+              </span>
             </div>
             <span class="ym-header__action-text">Giỏ<br/>hàng</span>
           </a>
-          <a href="#" class="ym-header__action ym-header__action--login">
-            ĐĂNG NHẬP / ĐĂNG KÝ
+          <a href="#" class="ym-header__action ym-header__action--login" @click.prevent="handleLoginClick">
+            <template v-if="authStore.isLoggedIn">
+              <i class="ri-user-fill"></i> {{ authStore.userName }}
+            </template>
+            <template v-else>
+              ĐĂNG NHẬP / ĐĂNG KÝ
+            </template>
           </a>
         </div>
       </div>
@@ -92,21 +147,18 @@ const closeCategoryDrawer = () => {
           <i class="ri-menu-line"></i> DANH MỤC SẢN PHẨM
         </button>
         <div class="ym-nav__scroll">
-          <a
+          <RouterLink
             v-for="(item, idx) in navLinks"
             :key="idx"
-            :href="item.link"
+            :to="item.link"
             class="ym-nav__link"
             :class="{ 'ym-nav__link--has-badge': item.badge }"
           >
             <i v-if="item.icon" class="ri-fire-fill"></i>
             {{ item.label }}
             <span v-if="item.badge" class="ym-nav__badge-new">{{ item.badge }}</span>
-          </a>
+          </RouterLink>
         </div>
-        <a href="/about" class="ym-nav__link ym-nav__link--cta">
-          <i class="ri-file-search-line"></i> TRA CỨU ĐƠN HÀNG
-        </a>
       </div>
     </nav>
 
@@ -135,14 +187,14 @@ const closeCategoryDrawer = () => {
               <i class="ri-arrow-right-s-line ym-drawer__arrow" :class="{ 'ym-drawer__arrow--open': expandedItem === item.id }"></i>
             </div>
             <!-- Item without submenu: regular link -->
-            <a
+            <RouterLink
               v-else
-              :href="item.link"
+              :to="item.link"
               class="ym-drawer__link"
               @click="closeCategoryDrawer"
             >
               {{ item.name }}
-            </a>
+            </RouterLink>
             <!-- Submenu accordion -->
             <div v-if="item.submenu && expandedItem === item.id" class="ym-drawer__submenu">
               <div v-for="(col, idx) in item.submenu.columns" :key="idx" class="ym-drawer__sub-group">
@@ -159,10 +211,25 @@ const closeCategoryDrawer = () => {
       </div>
     </Transition>
 
+    <!-- Login Modal -->
+    <LoginModal
+      v-model="showLoginModal"
+      @logged-in="onLoggedIn"
+    />
+
     <!-- Main Content -->
     <main class="ym-main">
       <RouterView />
     </main>
+
+    <!-- Global Trust Badges -->
+    <TrustBadges v-if="!isHomePage" />
+
+    <!-- Back to top -->
+    <BackToTop />
+
+    <!-- Floating Contact Buttons -->
+    <FloatingActions />
 
     <!-- Footer -->
     <footer class="ym-footer">
@@ -205,7 +272,6 @@ const closeCategoryDrawer = () => {
             <h4>HỢP TÁC &amp; LIÊN KẾT</h4>
             <ul>
               <li><a href="#">http://YukiMart.vn</a></li>
-              <li><a href="#">http://Webdemo.com</a></li>
             </ul>
             <h4 class="mt-3">TẢI ỨNG DỤNG</h4>
             <div class="ym-footer__apps">
@@ -234,7 +300,7 @@ const closeCategoryDrawer = () => {
             YukiMart luôn tôn trọng khách hàng, lấy niềm vui, sự hài lòng của khách hàng để làm động lực, không ngừng tìm kiếm các sản phẩm tốt nhất
             để mỗi khách hàng đều có thể tỏ nên tu tin và xinh đẹp hơn. Các hãng thương hiệu mỹ phẩm ở YukiMart luôn là các thương hiệu uy tín, được
             mọi người tin dùng như : Secret Key, Laneige, Vichy, Avene, Yves Rocher, Laroche Posay, Lancôme,... Bên cạnh đó khi mua hàng ở YukiMart,
-            khách luôn được giá ưu đãi tốt nhất, dịch vụ nhanh chóng & nhiều chương trình Khuyến Mãi khác.
+            khách luôn được giá ưu đãi tốt nhất, dịch vụ nhanh chóng &amp; nhiều chương trình Khuyến Mãi khác.
           </p>
         </div>
 
@@ -242,17 +308,17 @@ const closeCategoryDrawer = () => {
         <div class="ym-footer__bottom">
           <div class="ym-footer__bottom-left">
             <p><strong>Bản quyền © 2026 YukiMart.vn</strong></p>
-            <p><strong>Công Ty TNHH YUKIMART BEAUTY &amp; S.P.A</strong></p>
+            <p><strong>Công Ty TNHH YUKIMART MART</strong></p>
             <ul>
               <li><i class="ri-map-pin-line"></i> Địa chỉ giao dịch:</li>
               <li>524 Lý Thường Kiệt, Phường 7, Tân Bình, Ho Chi Minh City, Vietnam, 700000</li>
             </ul>
             <p>Hotline: <strong>093 373 87 98</strong></p>
           </div>
-          <div class="ym-footer__bottom-right">
+          <!-- <div class="ym-footer__bottom-right">
             <p>Giấy chứng nhận Đăng ký Kinh doanh số 0313612829 do Sở Kế
             hoạch và Đầu tư Thành phố Hồ Chí Minh cấp ngày 13/01/2016</p>
-          </div>
+          </div> -->
         </div>
       </div>
     </footer>

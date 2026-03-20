@@ -1,62 +1,69 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useProductStore } from '../stores/products'
-import { useProductFormat } from '../composables/useProductFormat'
+import { getProductDetailById, getRelatedProductsFor, getSameBrandProductsFor } from '../configs'
+import ProductGallery from '../components/ProductGallery.vue'
+import ProductInfo from '../components/ProductInfo.vue'
+import ProductTabs from '../components/ProductTabs.vue'
+import ProductSidebar from '../components/ProductSidebar.vue'
 
 const route = useRoute()
-const store = useProductStore()
-const { formatPrice, isInStock } = useProductFormat()
 
-onMounted(() => {
-  const id = Number(route.params.id)
-  store.fetchProduct(id)
+const productId = computed(() => Number(route.params.id))
+const product = computed(() => getProductDetailById(productId.value))
+const related = computed(() => getRelatedProductsFor(productId.value))
+const sameBrand = computed(() => getSameBrandProductsFor(productId.value))
+
+// Scroll to top khi chuyển sản phẩm
+watch(productId, () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 })
 </script>
 
 <template>
-  <div>
-    <div class="page-header">
+  <div class="ym-pdp">
+    <!-- Breadcrumb -->
+    <div class="ym-pdp__breadcrumb">
       <div class="container">
-        <RouterLink to="/products" style="color: var(--color-text-muted); margin-bottom: 0.5rem; display: inline-block;">
-          ← Quay lại danh sách
-        </RouterLink>
-        <h1>Chi tiết sản phẩm</h1>
+        <nav class="ym-pdp__breadcrumb-nav">
+          <RouterLink
+            v-for="(crumb, i) in product.categoryPath"
+            :key="i"
+            :to="i === 0 ? '/' : '#'"
+            class="ym-pdp__breadcrumb-link"
+          >
+            {{ crumb }}
+            <i v-if="i < product.categoryPath.length - 1" class="ri-arrow-right-s-line"></i>
+          </RouterLink>
+          <span class="ym-pdp__breadcrumb-current">{{ product.name }}</span>
+        </nav>
       </div>
     </div>
 
-    <section class="section">
-      <div class="container">
-        <div v-if="store.loading" class="loading">
-          <div class="spinner"></div>
+    <!-- Main layout: Left (gallery+info+tabs) + Right (sidebar) -->
+    <div class="container">
+      <div class="ym-pdp__layout">
+        <!-- Left column: gallery + info + tabs -->
+        <div class="ym-pdp__left">
+          <!-- Top: gallery + info side by side -->
+          <div class="ym-pdp__top">
+            <ProductGallery :key="product.id" :product="product" />
+            <ProductInfo :key="product.id" :product="product" />
+          </div>
+
+          <!-- Tabs immediately below -->
+          <ProductTabs :key="product.id" :product="product" />
         </div>
 
-        <div v-else-if="store.currentProduct" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-          <div>
-            <img
-              :src="store.currentProduct.image"
-              :alt="store.currentProduct.name"
-              style="width: 100%; border-radius: var(--radius-lg); background: var(--color-bg-hover); min-height: 300px;"
-            />
-          </div>
-          <div>
-            <span class="badge" style="margin-bottom: 1rem;">{{ store.currentProduct.category }}</span>
-            <h2 style="font-size: 1.75rem; margin-bottom: 1rem;">{{ store.currentProduct.name }}</h2>
-            <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">{{ store.currentProduct.description }}</p>
-            <p class="card-price" style="font-size: 2rem; margin-bottom: 1.5rem;">
-              {{ formatPrice(store.currentProduct.price) }}
-            </p>
-            <p style="margin-bottom: 1.5rem;">
-              <span v-if="isInStock(store.currentProduct.stock)" style="color: var(--color-success);">✓ Còn hàng</span>
-              <span v-else style="color: var(--color-secondary);">✗ Hết hàng</span>
-              <span style="color: var(--color-text-muted);"> ({{ store.currentProduct.stock }} sản phẩm)</span>
-            </p>
-            <button class="btn btn-primary" style="width: 100%;">
-              🛒 Thêm vào giỏ hàng
-            </button>
-          </div>
+        <!-- Right sidebar -->
+        <div class="ym-pdp__right">
+          <ProductSidebar
+            :product="product"
+            :related-products="related"
+            :same-brand-products="sameBrand"
+          />
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </template>

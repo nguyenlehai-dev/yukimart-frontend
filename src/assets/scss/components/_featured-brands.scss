@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use '../variables' as *;
 
 .ym-featured-brands {
@@ -54,7 +55,7 @@
 
     &:hover {
       border-color: $ym-green;
-      box-shadow: 0 2px 8px rgba($ym-green, 0.1);
+      box-shadow: 0 2px 8px color.change($ym-green, $alpha: 0.1);
     }
   }
 

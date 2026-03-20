@@ -1,0 +1,142 @@
+@use 'sass:color';
+@use '../variables' as *;
+
+.ym-campaign {
+  padding: 20px 0 0;
+  background-color: rgb(245, 251, 246);
+
+  .container {
+    background: #fff;
+    border-radius: 6px;
+    padding: 20px;
+  }
+
+  &__header {
+    text-align: center;
+    margin-bottom: 28px;
+    padding: 28px 20px 24px;
+    background: linear-gradient(135deg, $ym-green, color.adjust($ym-green, $lightness: -8%));
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -30px;
+      right: -30px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: -20px;
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 50%;
+    }
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    letter-spacing: 1px;
+    position: relative;
+    z-index: 1;
+
+    i {
+      font-size: 26px;
+      color: #FFD700;
+      filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.4));
+    }
+  }
+
+  &__subtitle {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    font-weight: 500;
+  }
+
+  // ── Grid: 2 columns like Hasaki ──
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  &__item {
+    text-decoration: none;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #eee;
+    transition: all 0.25s ease;
+    display: block;
+
+    &:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      border-color: $ym-green;
+
+      .ym-campaign__img {
+        transform: scale(1.03);
+      }
+    }
+  }
+
+  &__img-wrap {
+    overflow: hidden;
+    border-radius: 6px 6px 0 0;
+  }
+
+  &__img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  &__caption {
+    font-size: 13px;
+    font-weight: 600;
+    color: $ym-text;
+    padding: 10px 12px;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+}
+
+// ── Responsive ──
+@media (max-width: 1199.98px) {
+  .ym-campaign__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ym-campaign {
+    padding: 10px 0 0;
+
+    .container { padding: 12px; }
+    &__grid { grid-template-columns: 1fr; gap: 12px; }
+    &__title { font-size: 16px; }
+  }
+}

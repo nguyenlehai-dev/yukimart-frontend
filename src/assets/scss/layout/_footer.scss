@@ -5,6 +5,8 @@
   border-top: 3px solid $ym-green;
   padding: 28px 0 0;
   color: #555;
+  position: relative;
+  z-index: 1000;
 
   &__grid {
     display: grid;
