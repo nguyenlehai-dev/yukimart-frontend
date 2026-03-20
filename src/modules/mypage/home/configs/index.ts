@@ -87,8 +87,9 @@ export interface Product {
   brand: string
   brandLogo?: string
   image: string
-  originalPrice: number
-  salePrice: number
+  originalPrice: number   // giá gốc (admin thấy)
+  salePrice: number       // giá khách lẻ
+  wholesalePrice: number  // giá khách sỉ
   discount: number
   stock: number
 }
@@ -252,32 +253,32 @@ export const hotDealProducts: Product[] = [
   {
     id: 1, name: 'Son Lì Maybelline Color Sensational Inti-Matte', slug: 'son-maybelline',
     category: 'TRANG ĐIỂM', brand: 'Maybelline', image: dealSon,
-    originalPrice: 119000, salePrice: 100000, discount: 16, stock: 50,
+    originalPrice: 119000, salePrice: 100000, wholesalePrice: 65000, discount: 16, stock: 50,
   },
   {
     id: 2, name: 'Tinh Chất Melano CC Mờ Thâm, Nám Tàn Nhang', slug: 'tinh-chat-melano',
     category: 'CHĂM SÓC DA MẶT', brand: '3W Clinic', image: dealMelano,
-    originalPrice: 300000, salePrice: 259000, discount: 14, stock: 30,
+    originalPrice: 300000, salePrice: 259000, wholesalePrice: 168000, discount: 14, stock: 30,
   },
   {
     id: 3, name: 'Gel Sữa Chống Nắng Senka SPF50/PA++++', slug: 'chong-nang-senka',
     category: 'CHĂM SÓC DA MẶT', brand: 'Senka', image: dealSenka,
-    originalPrice: 86000, salePrice: 25000, discount: 31, stock: 100,
+    originalPrice: 86000, salePrice: 25000, wholesalePrice: 16000, discount: 31, stock: 100,
   },
   {
     id: 4, name: 'Mặt Nạ Dưỡng Săn Chắc Da Banobagi Vita Genic', slug: 'mat-na-banobagi',
     category: 'CHĂM SÓC DA MẶT', brand: 'Banobagi', image: dealMatNa,
-    originalPrice: 163000, salePrice: 130000, discount: 20, stock: 45,
+    originalPrice: 163000, salePrice: 130000, wholesalePrice: 85000, discount: 20, stock: 45,
   },
   {
     id: 5, name: 'Che Khuyết Điểm Maybelline Fit Me 130 Medium', slug: 'che-khuyet-diem',
     category: 'TRANG ĐIỂM', brand: 'Maybelline', image: dealCheKhuyetDiem,
-    originalPrice: 163000, salePrice: 130000, discount: 20, stock: 60,
+    originalPrice: 163000, salePrice: 130000, wholesalePrice: 85000, discount: 20, stock: 60,
   },
   {
     id: 6, name: 'Mascara Làm Dày Và Tơi Mi Maybelline Lash', slug: 'mascara-maybelline',
     category: 'TRANG ĐIỂM', brand: 'Maybelline', image: dealMascara,
-    originalPrice: 260000, salePrice: 250000, discount: 15, stock: 80,
+    originalPrice: 260000, salePrice: 250000, wholesalePrice: 163000, discount: 15, stock: 80,
   },
 ]
 
@@ -296,11 +297,11 @@ export const categorySections: CategorySectionData[] = [
     subTabs: ['Trang điểm môi', 'Tẩy trang', 'Trang điểm vùng mắt', 'Trang điểm mặt'],
     tags: ['Son môi', 'Cushion', 'Phấn phủ', 'Kem nền', 'Che khuyết điểm'],
     products: [
-      { id: 101, name: 'Son Lì Maybelline Chilli Nude 3.9g', slug: 'son-chilli', category: 'TRANG ĐIỂM', brand: '3W Clinic', image: skincareSon, originalPrice: 119000, salePrice: 100000, discount: 16, stock: 50 },
-      { id: 102, name: 'Gel Sữa Chống Nắng Senka SPF50/PA++++ 80g', slug: 'senka-uv', category: 'CHĂM SÓC DA MẶT', brand: 'ALEDA', image: skincareSenka, originalPrice: 86000, salePrice: 25000, discount: 31, stock: 100 },
-      { id: 103, name: 'Tinh Chất Melano CC Mờ Thâm 20ml Serum Vitamin C', slug: 'melano-cc', category: 'CHĂM SÓC DA MẶT', brand: 'Cetaphil', image: skincareMelano, originalPrice: 300000, salePrice: 259000, discount: 14, stock: 30 },
-      { id: 104, name: 'Mặt Nạ Melano CC Dưỡng Sáng Da 20 Miếng', slug: 'melano-mask', category: 'CLINIC & SPA', brand: '3W Clinic', image: skincareImages, originalPrice: 163000, salePrice: 130000, discount: 20, stock: 55 },
-      { id: 105, name: 'Nước Tẩy Trang Tươi Mặt L’Oreal 3-in-1 400ml', slug: 'loreal-tay-trang', category: 'CHĂM SÓC DA MẶT', brand: 'ARGUSSY', image: skincareDownload, originalPrice: 149000, salePrice: 96000, discount: 36, stock: 40 },
+      { id: 101, name: 'Son Lì Maybelline Chilli Nude 3.9g', slug: 'son-chilli', category: 'TRANG ĐIỂM', brand: '3W Clinic', image: skincareSon, originalPrice: 119000, salePrice: 100000, wholesalePrice: 65000, discount: 16, stock: 50 },
+      { id: 102, name: 'Gel Sữa Chống Nắng Senka SPF50/PA++++ 80g', slug: 'senka-uv', category: 'CHĂM SÓC DA MẶT', brand: 'ALEDA', image: skincareSenka, originalPrice: 86000, salePrice: 25000, wholesalePrice: 16000, discount: 31, stock: 100 },
+      { id: 103, name: 'Tinh Chất Melano CC Mờ Thâm 20ml Serum Vitamin C', slug: 'melano-cc', category: 'CHĂM SÓC DA MẶT', brand: 'Cetaphil', image: skincareMelano, originalPrice: 300000, salePrice: 259000, wholesalePrice: 168000, discount: 14, stock: 30 },
+      { id: 104, name: 'Mặt Nạ Melano CC Dưỡng Sáng Da 20 Miếng', slug: 'melano-mask', category: 'CLINIC & SPA', brand: '3W Clinic', image: skincareImages, originalPrice: 163000, salePrice: 130000, wholesalePrice: 85000, discount: 20, stock: 55 },
+      { id: 105, name: 'Nước Tẩy Trang Tươi Mặt L’Oreal 3-in-1 400ml', slug: 'loreal-tay-trang', category: 'CHĂM SÓC DA MẶT', brand: 'ARGUSSY', image: skincareDownload, originalPrice: 149000, salePrice: 96000, wholesalePrice: 62000, discount: 36, stock: 40 },
     ],
   },
   {
@@ -316,11 +317,11 @@ export const categorySections: CategorySectionData[] = [
     subTabs: ['Trang điểm môi', 'Tẩy trang', 'Trang điểm vùng mắt', 'Trang điểm mặt'],
     tags: ['Sữa rửa mặt', 'Nước hoa hồng', 'Nước cân bằng', 'Toner', 'Essenser', 'Tinh chất', 'Emulsion'],
     products: [
-      { id: 201, name: 'Sữa Rửa Mặt Cetaphil Gentle Skin', slug: 'cetaphil-cleanser', category: 'CHĂM SÓC DA MẶT', brand: 'Cetaphil', image: skincareMelano, originalPrice: 200000, salePrice: 169000, discount: 16, stock: 70 },
-      { id: 202, name: 'Nước Tẩy Trang Tươi Mặt L\'Oreal 3-in-1', slug: 'loreal-tay-trang', category: 'CHĂM SÓC DA MẶT', brand: "L'Oréal", image: skincareDownload, originalPrice: 149000, salePrice: 96000, discount: 36, stock: 90 },
-      { id: 203, name: 'Nước Tẩy Trang Byphasse Cho Mọi Loại Da', slug: 'byphasse', category: 'CHĂM SÓC DA MẶT', brand: 'Byphasse', image: skincareImages, originalPrice: 191000, salePrice: 89000, discount: 53, stock: 55 },
-      { id: 204, name: 'Mặt Nạ Melano CC Dưỡng Sáng Da 20 Miếng', slug: 'melano-mask', category: 'CHĂM SÓC DA MẶT', brand: '3W Clinic', image: skincareSon, originalPrice: 163000, salePrice: 130000, discount: 20, stock: 42 },
-      { id: 205, name: 'Gel Sữa Chống Nắng Senka SPF50 80g', slug: 'senka-spf50', category: 'CHĂM SÓC DA MẶT', brand: 'Senka', image: skincareSenka, originalPrice: 350000, salePrice: 289000, discount: 17, stock: 35 },
+      { id: 201, name: 'Sữa Rửa Mặt Cetaphil Gentle Skin', slug: 'cetaphil-cleanser', category: 'CHĂM SÓC DA MẶT', brand: 'Cetaphil', image: skincareMelano, originalPrice: 200000, salePrice: 169000, wholesalePrice: 110000, discount: 16, stock: 70 },
+      { id: 202, name: 'Nước Tẩy Trang Tươi Mặt L\'Oreal 3-in-1', slug: 'loreal-tay-trang', category: 'CHĂM SÓC DA MẶT', brand: "L'Oréal", image: skincareDownload, originalPrice: 149000, salePrice: 96000, wholesalePrice: 62000, discount: 36, stock: 90 },
+      { id: 203, name: 'Nước Tẩy Trang Byphasse Cho Mọi Loại Da', slug: 'byphasse', category: 'CHĂM SÓC DA MẶT', brand: 'Byphasse', image: skincareImages, originalPrice: 191000, salePrice: 89000, wholesalePrice: 58000, discount: 53, stock: 55 },
+      { id: 204, name: 'Mặt Nạ Melano CC Dưỡng Sáng Da 20 Miếng', slug: 'melano-mask', category: 'CHĂM SÓC DA MẶT', brand: '3W Clinic', image: skincareSon, originalPrice: 163000, salePrice: 130000, wholesalePrice: 85000, discount: 20, stock: 42 },
+      { id: 205, name: 'Gel Sữa Chống Nắng Senka SPF50 80g', slug: 'senka-spf50', category: 'CHĂM SÓC DA MẶT', brand: 'Senka', image: skincareSenka, originalPrice: 350000, salePrice: 289000, wholesalePrice: 188000, discount: 17, stock: 35 },
     ],
   },
   {
@@ -336,11 +337,11 @@ export const categorySections: CategorySectionData[] = [
     subTabs: ['Dưỡng ẩm toàn thân', 'Sữa tắm - xà bông tắm', 'Khử mùi cơ thể', 'Tẩy tế bào chết toàn thân'],
     tags: ['Sữa tắm', 'Dưỡng thể', 'Tẩy tế bào chết', 'Dưỡng ẩm', 'Kem chống nắng'],
     products: [
-      { id: 301, name: 'Sữa Tắm Dưỡng Ẩm Dove Deeply Nourishing', slug: 'dove-body', category: 'CHĂM SÓC TOÀN THÂN', brand: 'Dove', image: skincareImages, originalPrice: 120000, salePrice: 89000, discount: 26, stock: 80 },
-      { id: 302, name: 'Kem Dưỡng Thể Vaseline Total Moisture', slug: 'vaseline-body', category: 'CHĂM SÓC TOÀN THÂN', brand: 'Vaseline', image: skincareSenka, originalPrice: 150000, salePrice: 119000, discount: 21, stock: 65 },
-      { id: 303, name: 'Gel Tắm Trắng Da Senka Perfect Whip', slug: 'senka-whip', category: 'CHĂM SÓC TOÀN THÂN', brand: 'Senka', image: skincareMelano, originalPrice: 95000, salePrice: 72000, discount: 24, stock: 90 },
-      { id: 304, name: 'Lăn Khử Mùi Nivea Dry Comfort White', slug: 'nivea-deodorant', category: 'CHĂM SÓC TOÀN THÂN', brand: 'Nivea', image: skincareSon, originalPrice: 75000, salePrice: 59000, discount: 21, stock: 100 },
-      { id: 305, name: 'Tẩy Tế Bào Chết Body St.Ives Apricot', slug: 'stives-scrub', category: 'CHĂM SÓC TOÀN THÂN', brand: 'St.Ives', image: skincareDownload, originalPrice: 180000, salePrice: 139000, discount: 23, stock: 50 },
+      { id: 301, name: 'Sữa Tắm Dưỡng Ẩm Dove Deeply Nourishing', slug: 'dove-body', category: 'CHĂM SÓC TOÀN THÂN', brand: 'Dove', image: skincareImages, originalPrice: 120000, salePrice: 89000, wholesalePrice: 58000, discount: 26, stock: 80 },
+      { id: 302, name: 'Kem Dưỡng Thể Vaseline Total Moisture', slug: 'vaseline-body', category: 'CHĂM SÓC TOÀN THÂN', brand: 'Vaseline', image: skincareSenka, originalPrice: 150000, salePrice: 119000, wholesalePrice: 77000, discount: 21, stock: 65 },
+      { id: 303, name: 'Gel Tắm Trắng Da Senka Perfect Whip', slug: 'senka-whip', category: 'CHĂM SÓC TOÀN THÂN', brand: 'Senka', image: skincareMelano, originalPrice: 95000, salePrice: 72000, wholesalePrice: 47000, discount: 24, stock: 90 },
+      { id: 304, name: 'Lăn Khử Mùi Nivea Dry Comfort White', slug: 'nivea-deodorant', category: 'CHĂM SÓC TOÀN THÂN', brand: 'Nivea', image: skincareSon, originalPrice: 75000, salePrice: 59000, wholesalePrice: 38000, discount: 21, stock: 100 },
+      { id: 305, name: 'Tẩy Tế Bào Chết Body St.Ives Apricot', slug: 'stives-scrub', category: 'CHĂM SÓC TOÀN THÂN', brand: 'St.Ives', image: skincareDownload, originalPrice: 180000, salePrice: 139000, wholesalePrice: 90000, discount: 23, stock: 50 },
     ],
   },
   {
@@ -356,37 +357,37 @@ export const categorySections: CategorySectionData[] = [
     subTabs: ['Triệt lông vĩnh viễn', 'Trị liệu toàn thân', 'Giảm béo', 'Điều trị sẹo rỗ'],
     tags: ['Triệt lông', 'Tẩy tế bào da', 'Điều trị mụn', 'Nâng cơ', 'Chăm sóc tóc', 'Giảm béo', 'Chăm sóc da mặt', 'Trị rạn nhang'],
     products: [
-      { id: 401, name: 'Son Lì Maybelline Chilli Nude 3.9g Color Sensational Inti-Matte Nudes Lipstick', slug: 'son-chilli-clinic', category: 'TRANG ĐIỂM', brand: '3W CLINIC', image: skincareSon, originalPrice: 119000, salePrice: 100000, discount: 16, stock: 50 },
-      { id: 402, name: 'Mặt Nạ Melano CC Dưỡng Sáng Da Hỗ Trợ Làm Mờ Thâm Nám 20 Miếng', slug: 'melano-clinic', category: 'CLINIC & SPA', brand: '3W CLINIC', image: skincareImages, originalPrice: 163000, salePrice: 130000, discount: 20, stock: 45 },
-      { id: 403, name: 'Kem Nền Lì Fit Me Maybelline 100 Buff Beige 30ml Fit Me Matte + Poreless Foundation', slug: 'fitme-clinic', category: 'CHĂM SÓC DA MẶT', brand: 'ANGELA', image: dealCheKhuyetDiem, originalPrice: 163000, salePrice: 140000, discount: 14, stock: 60 },
-      { id: 404, name: 'Combo 2 Son Kem Lì 2 Đầu LEMONADE Of Sugar + 05 Tea Perfect Couple Lip', slug: 'lemonade-clinic', category: 'CHĂM SÓC TÓC', brand: 'AGAPAN', image: skincareMelano, originalPrice: 163000, salePrice: 150000, discount: 8, stock: 40 },
-      { id: 405, name: 'Mascara Làm Dày Và Tơi Mi Maybelline Lash Sensational 10ml Lash Sensational Waterproof Mascara', slug: 'mascara-clinic', category: 'CHĂM SÓC DA MẶT', brand: 'ALEDA', image: skincareDownload, originalPrice: 148000, salePrice: 120000, discount: 19, stock: 80 },
+      { id: 401, name: 'Son Lì Maybelline Chilli Nude 3.9g Color Sensational Inti-Matte Nudes Lipstick', slug: 'son-chilli-clinic', category: 'TRANG ĐIỂM', brand: '3W CLINIC', image: skincareSon, originalPrice: 119000, salePrice: 100000, wholesalePrice: 65000, discount: 16, stock: 50 },
+      { id: 402, name: 'Mặt Nạ Melano CC Dưỡng Sáng Da Hỗ Trợ Làm Mờ Thâm Nám 20 Miếng', slug: 'melano-clinic', category: 'CLINIC & SPA', brand: '3W CLINIC', image: skincareImages, originalPrice: 163000, salePrice: 130000, wholesalePrice: 85000, discount: 20, stock: 45 },
+      { id: 403, name: 'Kem Nền Lì Fit Me Maybelline 100 Buff Beige 30ml Fit Me Matte + Poreless Foundation', slug: 'fitme-clinic', category: 'CHĂM SÓC DA MẶT', brand: 'ANGELA', image: dealCheKhuyetDiem, originalPrice: 163000, salePrice: 140000, wholesalePrice: 91000, discount: 14, stock: 60 },
+      { id: 404, name: 'Combo 2 Son Kem Lì 2 Đầu LEMONADE Of Sugar + 05 Tea Perfect Couple Lip', slug: 'lemonade-clinic', category: 'CHĂM SÓC TÓC', brand: 'AGAPAN', image: skincareMelano, originalPrice: 163000, salePrice: 150000, wholesalePrice: 98000, discount: 8, stock: 40 },
+      { id: 405, name: 'Mascara Làm Dày Và Tơi Mi Maybelline Lash Sensational 10ml Lash Sensational Waterproof Mascara', slug: 'mascara-clinic', category: 'CHĂM SÓC DA MẶT', brand: 'ALEDA', image: skincareDownload, originalPrice: 148000, salePrice: 120000, wholesalePrice: 78000, discount: 19, stock: 80 },
     ],
   },
 ]
 
 // ──── Gợi ý dành riêng cho bạn ────
 export const suggestedProducts: Product[] = [
-  { id: 501, name: 'Son Lì Maybelline Chilli Nude 3.9g Color Sensational Inti-Matte Nudes Lipstick', slug: 'son-chilli-sug', category: 'TRANG ĐIỂM', brand: '3W CLINIC', image: skincareSon, originalPrice: 119000, salePrice: 100000, discount: 16, stock: 50 },
-  { id: 502, name: 'Mặt Nạ Melano CC Dưỡng Sáng Da Hỗ Trợ Làm Mờ Thâm Nám 20 Miếng', slug: 'melano-sug', category: 'CLINIC & SPA', brand: '3W CLINIC', image: skincareImages, originalPrice: 163000, salePrice: 130000, discount: 20, stock: 45 },
-  { id: 503, name: 'Kem Nền Mịn Lì Fit Me Maybelline 100 Buff Beige 30ml Fit Me Matte + Poreless Foundation', slug: 'fitme-sug', category: 'CHĂM SÓC DA MẶT', brand: 'ANGELA', image: dealCheKhuyetDiem, originalPrice: 163000, salePrice: 140000, discount: 14, stock: 60 },
-  { id: 504, name: 'Combo 2 Son Kem Lì 2 Đầu LEMONADE Of Sugar + 05 Tea Perfect Couple Lip', slug: 'lemonade-sug', category: 'CHĂM SÓC TÓC', brand: 'AGAPAN', image: skincareMelano, originalPrice: 163000, salePrice: 150000, discount: 8, stock: 40 },
-  { id: 505, name: 'Mascara Làm Dày Và Tơi Mi Maybelline Lash Sensational 10ml Waterproof Mascara', slug: 'mascara-sug', category: 'CHĂM SÓC DA MẶT', brand: 'ALEDA', image: skincareDownload, originalPrice: 148000, salePrice: 120000, discount: 19, stock: 80 },
-  { id: 506, name: 'Kem Lót Trang Điểm Maybelline Baby Skin 22ml Baby Skin Pore Cream', slug: 'babyskin-sug', category: 'CHĂM SÓC DA MẶT', brand: 'Maybelline', image: dealMatNa, originalPrice: 299000, salePrice: 250000, discount: 21, stock: 35 },
-  { id: 507, name: 'Gel Sữa Chống Nắng Senka SPF50/PA++++ 80g Perfect UV Gel', slug: 'senka-sug', category: 'CHĂM SÓC DA MẶT', brand: 'ALEDA', image: skincareSenka, originalPrice: 86000, salePrice: 25000, discount: 31, stock: 100 },
-  { id: 508, name: 'Nước Tẩy Trang Tươi Mặt L\'Oreal 3-in-1 Dành Cho Da Dầu & Da Hỗn Hợp 400ml', slug: 'loreal-sug', category: 'CHĂM SÓC DA MẶT', brand: 'ARGUSSY', image: skincareDownload, originalPrice: 149000, salePrice: 96000, discount: 36, stock: 90 },
-  { id: 509, name: 'Tinh Chất Melano CC Mờ Thâm Nám Tàn Nhang 20ml Serum Vitamin C', slug: 'melano2-sug', category: 'CHĂM SÓC DA MẶT', brand: 'Cetaphil', image: skincareMelano, originalPrice: 300000, salePrice: 259000, discount: 14, stock: 30 },
-  { id: 510, name: 'Mặt Nạ BNBG Dưỡng Sáng Da Vitamin C Vita Genic Whitening Jelly Mask', slug: 'bnbg-sug', category: 'CHĂM SÓC DA MẶT', brand: 'BNBG', image: skincareImages, originalPrice: 43000, salePrice: 37000, discount: 14, stock: 55 },
-  { id: 511, name: 'Nước Tẩy Trang Byphasse Cho Mọi Loại Da 500ml Solution Micellaire Face', slug: 'byphasse-sug', category: 'CHĂM SÓC DA MẶT', brand: 'BIODERMA', image: skincareSenka, originalPrice: 191000, salePrice: 89000, discount: 53, stock: 42 },
-  { id: 512, name: 'Kem Che Khuyết Điểm Maybelline 110 Fair Anti Instant Age Rewind Eraser Dark Circles', slug: 'concealer-sug', category: 'TRANG ĐIỂM', brand: 'CARE:NEL', image: dealCheKhuyetDiem, originalPrice: 195000, salePrice: 117000, discount: 40, stock: 60 },
+  { id: 501, name: 'Son Lì Maybelline Chilli Nude 3.9g Color Sensational Inti-Matte Nudes Lipstick', slug: 'son-chilli-sug', category: 'TRANG ĐIỂM', brand: '3W CLINIC', image: skincareSon, originalPrice: 119000, salePrice: 100000, wholesalePrice: 65000, discount: 16, stock: 50 },
+  { id: 502, name: 'Mặt Nạ Melano CC Dưỡng Sáng Da Hỗ Trợ Làm Mờ Thâm Nám 20 Miếng', slug: 'melano-sug', category: 'CLINIC & SPA', brand: '3W CLINIC', image: skincareImages, originalPrice: 163000, salePrice: 130000, wholesalePrice: 85000, discount: 20, stock: 45 },
+  { id: 503, name: 'Kem Nền Mịn Lì Fit Me Maybelline 100 Buff Beige 30ml Fit Me Matte + Poreless Foundation', slug: 'fitme-sug', category: 'CHĂM SÓC DA MẶT', brand: 'ANGELA', image: dealCheKhuyetDiem, originalPrice: 163000, salePrice: 140000, wholesalePrice: 91000, discount: 14, stock: 60 },
+  { id: 504, name: 'Combo 2 Son Kem Lì 2 Đầu LEMONADE Of Sugar + 05 Tea Perfect Couple Lip', slug: 'lemonade-sug', category: 'CHĂM SÓC TÓC', brand: 'AGAPAN', image: skincareMelano, originalPrice: 163000, salePrice: 150000, wholesalePrice: 98000, discount: 8, stock: 40 },
+  { id: 505, name: 'Mascara Làm Dày Và Tơi Mi Maybelline Lash Sensational 10ml Waterproof Mascara', slug: 'mascara-sug', category: 'CHĂM SÓC DA MẶT', brand: 'ALEDA', image: skincareDownload, originalPrice: 148000, salePrice: 120000, wholesalePrice: 78000, discount: 19, stock: 80 },
+  { id: 506, name: 'Kem Lót Trang Điểm Maybelline Baby Skin 22ml Baby Skin Pore Cream', slug: 'babyskin-sug', category: 'CHĂM SÓC DA MẶT', brand: 'Maybelline', image: dealMatNa, originalPrice: 299000, salePrice: 250000, wholesalePrice: 163000, discount: 21, stock: 35 },
+  { id: 507, name: 'Gel Sữa Chống Nắng Senka SPF50/PA++++ 80g Perfect UV Gel', slug: 'senka-sug', category: 'CHĂM SÓC DA MẶT', brand: 'ALEDA', image: skincareSenka, originalPrice: 86000, salePrice: 25000, wholesalePrice: 16000, discount: 31, stock: 100 },
+  { id: 508, name: 'Nước Tẩy Trang Tươi Mặt L\'Oreal 3-in-1 Dành Cho Da Dầu & Da Hỗn Hợp 400ml', slug: 'loreal-sug', category: 'CHĂM SÓC DA MẶT', brand: 'ARGUSSY', image: skincareDownload, originalPrice: 149000, salePrice: 96000, wholesalePrice: 62000, discount: 36, stock: 90 },
+  { id: 509, name: 'Tinh Chất Melano CC Mờ Thâm Nám Tàn Nhang 20ml Serum Vitamin C', slug: 'melano2-sug', category: 'CHĂM SÓC DA MẶT', brand: 'Cetaphil', image: skincareMelano, originalPrice: 300000, salePrice: 259000, wholesalePrice: 168000, discount: 14, stock: 30 },
+  { id: 510, name: 'Mặt Nạ BNBG Dưỡng Sáng Da Vitamin C Vita Genic Whitening Jelly Mask', slug: 'bnbg-sug', category: 'CHĂM SÓC DA MẶT', brand: 'BNBG', image: skincareImages, originalPrice: 43000, salePrice: 37000, wholesalePrice: 24000, discount: 14, stock: 55 },
+  { id: 511, name: 'Nước Tẩy Trang Byphasse Cho Mọi Loại Da 500ml Solution Micellaire Face', slug: 'byphasse-sug', category: 'CHĂM SÓC DA MẶT', brand: 'BIODERMA', image: skincareSenka, originalPrice: 191000, salePrice: 89000, wholesalePrice: 58000, discount: 53, stock: 42 },
+  { id: 512, name: 'Kem Che Khuyết Điểm Maybelline 110 Fair Anti Instant Age Rewind Eraser Dark Circles', slug: 'concealer-sug', category: 'TRANG ĐIỂM', brand: 'CARE:NEL', image: dealCheKhuyetDiem, originalPrice: 195000, salePrice: 117000, wholesalePrice: 76000, discount: 40, stock: 60 },
 ]
 
 // ──── Navigation links ────
 export const navLinks = [
   { label: 'DEAL HẤP DẪN', link: '/products?deal=hot', icon: '🔥', badge: 'new' },
-  { label: 'THƯƠNG HIỆU', link: '/products?brands', icon: '' },
+  { label: 'THƯƠNG HIỆU', link: '/campaign/wow', icon: '' },
   { label: 'HÀNG MỚI VỀ', link: '/products?new', icon: '' },
   { label: 'SẢN PHẨM BÁN CHẠY', link: '/products?bestseller', icon: '' },
   { label: 'CLINIC & SPA', link: '/products?clinic', icon: '' },
-  { label: 'TIN TỨC', link: '/about', icon: '' },
+  { label: 'TIN TỨC', link: '/news', icon: '' },
 ]

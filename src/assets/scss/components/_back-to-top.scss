@@ -1,0 +1,27 @@
+@use 'sass:color';
+@use '../variables' as *;
+
+.ym-back-to-top {
+  position: fixed;
+  bottom: 80px;
+  right: 30px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: $ym-green;
+  color: #fff;
+  border: none;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: color.adjust($ym-green, $lightness: -8%);
+    transform: translateY(-3px);
+  }
+}
