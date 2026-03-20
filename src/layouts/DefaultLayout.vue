@@ -167,7 +167,8 @@ const userInitial = computed(() => {
           <!-- User area -->
           <div v-if="authStore.isLoggedIn" class="ym-header__user-wrap" ref="userWrapRef">
             <a href="#" class="ym-header__action ym-header__action--login" @click.prevent="handleLoginClick">
-              <span class="ym-header__user-avatar">{{ userInitial }}</span>
+              <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" class="ym-header__user-avatar" style="object-fit: cover; background: white;" />
+              <span v-else class="ym-header__user-avatar">{{ userInitial }}</span>
               <span class="ym-header__user-name">{{ authStore.userName }}</span>
               <i class="ri-arrow-down-s-line"></i>
             </a>
@@ -175,7 +176,8 @@ const userInitial = computed(() => {
             <Transition name="dropdown">
               <div v-if="showUserDropdown" class="ym-user-dropdown">
                 <div class="ym-user-dropdown__header">
-                  <span class="ym-user-dropdown__avatar">{{ userInitial }}</span>
+                  <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" class="ym-user-dropdown__avatar" style="object-fit: cover; background: white;" />
+                  <span v-else class="ym-user-dropdown__avatar">{{ userInitial }}</span>
                   <div class="ym-user-dropdown__info">
                     <strong>{{ authStore.userName }}</strong>
                     <small>{{ authStore.userRole === 'wholesale' ? 'Khách sỉ' : 'Thành viên' }}</small>
@@ -186,8 +188,9 @@ const userInitial = computed(() => {
                   Xin chào, <strong>{{ authStore.userName }}</strong>!
                 </p>
                 <ul class="ym-user-dropdown__menu">
-                  <li><a href="#" @click.prevent="closeUserDropdown"><i class="ri-user-line"></i> Tài khoản</a></li>
-                  <li><a href="#" @click.prevent="closeUserDropdown"><i class="ri-shopping-bag-line"></i> Đơn hàng</a></li>
+                  <li><RouterLink to="/account?tab=info" @click="closeUserDropdown"><i class="ri-user-line"></i> Tài khoản</RouterLink></li>
+                  <li><RouterLink to="/account?tab=orders" @click="closeUserDropdown"><i class="ri-shopping-bag-line"></i> Đơn hàng</RouterLink></li>
+                  <li><RouterLink to="/account?tab=activity" @click="closeUserDropdown"><i class="ri-chat-1-line"></i> Hoạt động</RouterLink></li>
                   <li><a href="#" @click.prevent="closeUserDropdown"><i class="ri-heart-line"></i> Yêu thích</a></li>
                   <li><a href="#" @click.prevent="closeUserDropdown"><i class="ri-settings-3-line"></i> Cài đặt</a></li>
                 </ul>
@@ -311,7 +314,8 @@ const userInitial = computed(() => {
       <Transition name="slide-up">
         <div v-if="showMobileAccount" class="ym-mobile-account">
           <div class="ym-mobile-account__header">
-            <span class="ym-mobile-account__avatar">{{ userInitial }}</span>
+            <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" class="ym-mobile-account__avatar" style="object-fit: cover; background: white;" />
+            <span v-else class="ym-mobile-account__avatar">{{ userInitial }}</span>
             <div class="ym-mobile-account__info">
               <strong>{{ authStore.userName }}</strong>
               <small>{{ authStore.userRole === 'wholesale' ? 'Khách sỉ' : 'Thành viên' }}</small>
@@ -321,8 +325,9 @@ const userInitial = computed(() => {
             </button>
           </div>
           <ul class="ym-mobile-account__menu">
-            <li><a href="#" @click.prevent="showMobileAccount = false"><i class="ri-user-line"></i> Tài khoản</a></li>
-            <li><a href="#" @click.prevent="showMobileAccount = false"><i class="ri-shopping-bag-line"></i> Đơn hàng</a></li>
+            <li><RouterLink to="/account?tab=info" @click="showMobileAccount = false"><i class="ri-user-line"></i> Tài khoản</RouterLink></li>
+            <li><RouterLink to="/account?tab=orders" @click="showMobileAccount = false"><i class="ri-shopping-bag-line"></i> Đơn hàng</RouterLink></li>
+            <li><RouterLink to="/account?tab=activity" @click="showMobileAccount = false"><i class="ri-chat-1-line"></i> Hoạt động</RouterLink></li>
             <li><a href="#" @click.prevent="showMobileAccount = false"><i class="ri-heart-line"></i> Yêu thích</a></li>
             <li><a href="#" @click.prevent="showMobileAccount = false"><i class="ri-settings-3-line"></i> Cài đặt</a></li>
           </ul>

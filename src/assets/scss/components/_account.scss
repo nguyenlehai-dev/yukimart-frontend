@@ -1,0 +1,1447 @@
+// ── Premium Account Management SCSS ──
+@use '../variables' as *;
+
+// ── Globals & Variables for Premium UI ──
+$ym-acc-bg: #f4f6f8;
+$ym-acc-card-bg: #ffffff;
+$ym-acc-shadow-sm: 0 2px 10px rgba(0,0,0,0.03);
+$ym-acc-shadow-md: 0 8px 30px rgba(0,0,0,0.05);
+$ym-acc-shadow-lg: 0 20px 40px rgba(0,0,0,0.08);
+$ym-acc-radius: 16px;
+$ym-acc-radius-sm: 10px;
+$ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+// Utility Backgrounds for markers
+.ym-bg-green { background: $ym-green !important; color: #fff !important; }
+.ym-bg-blue { background: #3b82f6 !important; color: #fff !important; }
+
+// ── Layout ──
+.ym-acc-layout {
+  background-color: $ym-acc-bg;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+
+  @media (min-width: 992px) {
+    height: 100vh;
+    overflow: hidden; // Lock entirely on desktop
+  }
+}
+
+// ── Premium Header ──
+.ym-acc-header-bg {
+  background: linear-gradient(135deg, $ym-green-dark 0%, $ym-green 100%);
+  height: 200px;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+
+  // Subtle background pattern or glow
+  &::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -10%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    filter: blur(40px);
+  }
+}
+
+// ── Grid Container ──
+.ym-acc-container {
+  margin-top: -100px;
+  position: relative;
+  z-index: 10;
+  padding-bottom: 24px;
+
+  @media (min-width: 992px) {
+    height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.ym-acc-grid {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+
+  @media (min-width: 992px) {
+    flex: 1;
+    min-height: 0;
+  }
+
+  @media (max-width: 991px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+// ── Profile Profile Card (Sidebar) ──
+.ym-acc-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  @media (min-width: 992px) {
+    height: 100%;
+  }
+
+  @media (max-width: 991px) {
+    width: 100%;
+  }
+}
+
+.ym-acc-profile-card {
+  background: $ym-acc-card-bg;
+  border-radius: $ym-acc-radius;
+  box-shadow: $ym-acc-shadow-md;
+  overflow: hidden;
+  text-align: center;
+
+  &__cover {
+    height: 100px;
+    background: linear-gradient(120deg, $ym-green-light 0%, #e0e9e5 100%);
+  }
+
+  &__avatar-wrap {
+    margin-top: -40px;
+    display: flex;
+    justify-content: center;
+  }
+
+  &__avatar {
+    width: 80px;
+    height: 80px;
+    background: #fff;
+    border-radius: 50%;
+    padding: 4px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    position: relative;
+    
+    // Using Initials Display
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    color: $ym-green;
+    z-index: 1;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: $ym-green-hover;
+      z-index: -1;
+    }
+  }
+
+  &__avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #fff;
+    position: relative;
+    z-index: 2;
+  }
+
+  &__info {
+    padding: 16px 24px 24px;
+  }
+
+  &__name {
+    font-size: 18px;
+    font-weight: 700;
+    color: $ym-text;
+    margin: 0 0 4px;
+  }
+
+  &__email {
+    font-size: 14px;
+    color: $ym-text-muted;
+    margin: 0 0 12px;
+  }
+
+  &__badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba($ym-orange, 0.1);
+    color: $ym-orange;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+// Sidebar Navigation
+.ym-acc-nav {
+  background: $ym-acc-card-bg;
+  border-radius: $ym-acc-radius;
+  box-shadow: $ym-acc-shadow-md;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  @media (min-width: 992px) {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #e2e8f0;
+      border-radius: 4px;
+    }
+  }
+
+  @media (max-width: 991px) {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 12px 16px;
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  &-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: $ym-text-light;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 16px 12px 6px;
+    margin-top: 4px;
+    opacity: 0.8;
+
+    @media (max-width: 991px) {
+      display: none;
+    }
+  }
+
+  &__divider {
+    height: 1px;
+    background: $ym-border;
+    margin: 8px 12px;
+
+    @media (max-width: 991px) {
+      display: none;
+    }
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border: none;
+    background: transparent;
+    border-radius: $ym-acc-radius-sm;
+    font-size: 15px;
+    font-weight: 500;
+    color: $ym-text-muted;
+    transition: $ym-acc-transition;
+    cursor: pointer;
+    position: relative;
+
+    i {
+      font-size: 20px;
+      transition: $ym-acc-transition;
+    }
+
+    &:hover {
+      background: $ym-green-hover;
+      color: $ym-green;
+      i { color: $ym-green; }
+    }
+
+    &--active {
+      background: $ym-green;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba($ym-green, 0.3);
+      
+      i { color: #fff; }
+
+      &:hover {
+        background: $ym-green-dark;
+        color: #fff;
+      }
+    }
+
+    &--danger {
+      color: $ym-red;
+      i { color: $ym-red; }
+      &:hover {
+        background: rgba($ym-red, 0.05);
+        color: $ym-red-dark;
+      }
+    }
+
+    @media (max-width: 991px) {
+      white-space: nowrap;
+    }
+  }
+
+  &__count {
+    margin-left: auto;
+    background: $ym-red;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+}
+
+// ── Main Content Workspace ──
+.ym-acc-main {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+
+  @media (min-width: 992px) {
+    height: 100%;
+  }
+}
+
+.ym-acc-panel {
+  background: $ym-acc-card-bg;
+  border-radius: $ym-acc-radius;
+  box-shadow: $ym-acc-shadow-md;
+  padding: 16px;
+  
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  @media (min-width: 992px) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  @media (max-width: 991px) {
+    position: relative;
+    height: auto;
+    overflow-y: visible;
+    padding: 24px;
+  }
+}
+
+.ym-acc-panel__header {
+  flex-shrink: 0;
+}
+
+.ym-acc-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0; // Avoid flex grow overflow
+
+  /* Custom inner scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+// Panel Section Header
+.ym-acc-section-header {
+  margin-bottom: 30px;
+}
+
+.ym-acc-section-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: $ym-text;
+  margin: 0 0 6px;
+}
+
+.ym-acc-section-desc {
+  font-size: 14px;
+  color: $ym-text-muted;
+  margin: 0;
+}
+
+// ── Generic Soft Badges ──
+.ym-soft-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+
+  i { font-size: 15px; }
+
+  &--primary { background: #e0e7ff; color: #4338ca; }
+  &--success { background: #dcfce7; color: #15803d; }
+  &--warning { background: #fef9c3; color: #a16207; }
+  &--error, &--danger { background: #fee2e2; color: #b91c1c; }
+  &--info { background: #e0f2fe; color: #0369a1; }
+  &--secondary { background: #f3f4f6; color: #374151; }
+}
+
+// ── Custom Buttons ──
+.ym-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: $ym-acc-radius-sm;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: $ym-acc-transition;
+
+  &--sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  &--primary {
+    background: $ym-green;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba($ym-green, 0.3);
+    &:hover {
+      background: $ym-green-dark;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba($ym-green, 0.4);
+    }
+  }
+
+  &--outline {
+    background: transparent;
+    border: 1px solid $ym-border;
+    color: $ym-text;
+    &:hover {
+      border-color: $ym-green;
+      color: $ym-green;
+      background: $ym-green-hover;
+    }
+  }
+
+  &--light {
+    background: #f3f4f6;
+    color: $ym-text;
+    &:hover {
+      background: #e5e7eb;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+}
+
+// ── Avatar Upload Section ──
+.ym-acc-avatar-upload {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: #fff;
+  border: 1px dashed $ym-border;
+  border-radius: $ym-acc-radius-sm;
+  margin-bottom: 24px;
+
+  @media (max-width: 575px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.ym-acc-avatar-preview {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: $ym-green-hover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: $ym-green;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+
+  img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+}
+
+.ym-acc-avatar-edit-btn {
+  position: absolute;
+  bottom: 0;
+  right: -4px;
+  width: 28px;
+  height: 28px;
+  background: $ym-green;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  border: 2px solid #fff;
+  transition: $ym-acc-transition;
+
+  &:hover {
+    background: $ym-green-dark;
+    transform: scale(1.1);
+  }
+}
+
+.ym-acc-avatar-text {
+  flex: 1;
+
+  h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: $ym-text;
+  }
+
+  p {
+    font-size: 13px;
+    color: $ym-text-muted;
+    margin: 0 0 12px;
+  }
+}
+
+// ── Account Sub Tabs ──
+.ym-acc-info-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; // Allow flex shrinkage
+}
+
+.ym-acc-subtabs {
+  display: flex;
+  gap: 32px;
+  border-bottom: 2px solid $ym-border;
+  margin-bottom: 24px;
+  flex-shrink: 0;
+}
+
+.ym-acc-subtab {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: $ym-text-muted;
+  padding: 0 0 12px 0;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.3s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: $ym-green;
+    border-radius: 3px 3px 0 0;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+  }
+
+  &:hover {
+    color: $ym-text;
+  }
+
+  &--active {
+    color: $ym-green;
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+}
+
+.ym-acc-subpane {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  animation: fadeIn 0.4s ease;
+
+  /* Custom inner scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+// ── Profile Form Grids ──
+.ym-acc-form-section {
+  background: transparent;
+}
+
+.ym-acc-form-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: $ym-text;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+.ym-acc-grid--3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  @media (max-width: 991px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (max-width: 575px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ym-acc-grid--4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+
+  @media (max-width: 991px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (max-width: 575px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ym-acc-divider {
+  border: 0;
+  height: 1px;
+  background: $ym-border;
+}
+
+.ym-form-group {
+  margin-bottom: 0;
+}
+
+// ── History Timeline ──
+.ym-acc-history {
+  padding: 10px 0;
+}
+
+.ym-acc-history__item {
+  display: flex;
+  gap: 20px;
+  position: relative;
+  padding-bottom: 30px;
+
+  &:last-child {
+    padding-bottom: 0;
+    
+    &::before {
+      display: none;
+    }
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 24px;
+    left: 7px;
+    width: 2px;
+    height: calc(100% - 24px);
+    background: $ym-border;
+  }
+}
+
+.ym-acc-history__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: $ym-green;
+  position: relative;
+  z-index: 2;
+  margin-top: 4px;
+  box-shadow: 0 0 0 4px #e0e9e5;
+}
+
+.ym-acc-history__content {
+  flex: 1;
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,0.03);
+  padding: 16px 20px;
+  border-radius: $ym-acc-radius-sm;
+}
+
+.ym-acc-history__header {
+  font-size: 14px;
+  color: $ym-text;
+  margin-bottom: 6px;
+
+  strong {
+    color: $ym-text;
+  }
+  
+  .ym-acc-history__highlight {
+    color: $ym-green;
+    font-weight: 500;
+  }
+}
+
+.ym-acc-history__date {
+  font-size: 13px;
+  color: $ym-text-muted;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// ── Tab 1: Account Info ──
+.ym-acc-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.ym-acc-info-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,0.03);
+  border-radius: $ym-acc-radius-sm;
+  transition: $ym-acc-transition;
+
+  &:hover {
+    background: #fff;
+    box-shadow: $ym-acc-shadow-sm;
+    transform: translateY(-2px);
+  }
+
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #e0e7ff;
+    color: #4338ca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+
+    &--green {
+      background: $ym-green-hover;
+      color: $ym-green;
+    }
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__label {
+    font-size: 13px;
+    color: $ym-text-muted;
+  }
+
+  &__value {
+    font-size: 15px;
+    color: $ym-text;
+  }
+}
+
+// Security Card & Form
+.ym-acc-security-card {
+  border: 1px solid $ym-border;
+  border-radius: $ym-acc-radius-sm;
+  padding: 24px;
+  background: #fff;
+
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+
+    @media (max-width: 575px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+  }
+
+  &__icon {
+    width: 60px;
+    height: 60px;
+    background: #fff1f2;
+    color: #be123c;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  &__text {
+    flex: 1;
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  
+  &__desc {
+    font-size: 14px;
+    color: $ym-text-muted;
+    margin: 0;
+  }
+
+  &__success {
+    padding: 12px 16px;
+    background: #dcfce7;
+    color: #15803d;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.ym-form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.ym-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ym-input-icon {
+  position: absolute;
+  left: 14px;
+  color: $ym-text-light;
+  font-size: 16px;
+  pointer-events: none;
+
+  & + .ym-input {
+    padding-left: 36px;
+  }
+}
+
+.ym-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid $ym-border;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: $ym-acc-transition;
+  outline: none;
+  background: #fff;
+  color: $ym-text;
+
+  &:focus {
+    border-color: $ym-green;
+    box-shadow: 0 0 0 3px rgba($ym-green, 0.15);
+  }
+}
+
+// ── Custom Tables ──
+.ym-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  border-radius: $ym-acc-radius-sm;
+  overflow: hidden;
+
+  thead {
+    background: #eef4fc; /* Light blue header */
+    
+    th {
+      font-size: 14px;
+      font-weight: 600;
+      color: $ym-text;
+      padding: 16px;
+      white-space: nowrap;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid $ym-border;
+      transition: background 0.2s;
+
+      &:hover {
+        background: #f8fafc;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      font-size: 14px;
+      padding: 16px;
+      vertical-align: middle;
+      color: $ym-text;
+    }
+  }
+}
+
+// ── Pagination ──
+.ym-pagination {
+  gap: 8px;
+}
+
+.ym-page-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid $ym-border;
+  background: #fff;
+  color: $ym-text;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: $ym-acc-transition;
+
+  &:hover:not(:disabled) {
+    border-color: $ym-green;
+    color: $ym-green;
+    background: $ym-green-hover;
+  }
+
+  &--active {
+    background: $ym-green;
+    border-color: $ym-green;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba($ym-green, 0.2);
+
+    &:hover {
+      background: $ym-green-dark;
+      color: #fff;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f9fafb;
+  }
+}
+
+// ── Tab 2: Account Orders ──
+.ym-acc-tabs-wrap {
+  border-bottom: 1px solid $ym-border;
+  margin-bottom: 30px;
+}
+
+.ym-acc-tabs {
+  display: flex;
+  gap: 30px;
+
+  @media (max-width: 575px) {
+    overflow-x: auto;
+    &::-webkit-scrollbar { display: none; }
+  }
+}
+
+.ym-acc-tab {
+  padding: 0 0 16px;
+  background: none;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: $ym-text-muted;
+  position: relative;
+  cursor: pointer;
+  transition: $ym-acc-transition;
+  white-space: nowrap;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 0;
+    height: 3px;
+    background: $ym-green;
+    transition: width 0.3s ease;
+    border-radius: 3px 3px 0 0;
+  }
+
+  &:hover {
+    color: $ym-text;
+  }
+
+  &--active {
+    color: $ym-green;
+    &::after {
+      width: 100%;
+    }
+  }
+}
+
+.ym-acc-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ym-modern-order {
+  border: 1px solid $ym-border;
+  border-radius: $ym-acc-radius-sm;
+  background: #fff;
+  transition: $ym-acc-transition;
+
+  &:hover {
+    box-shadow: $ym-acc-shadow-sm;
+    border-color: #cbd5e1;
+  }
+
+  &--open {
+    box-shadow: $ym-acc-shadow-md;
+    border-color: transparent;
+  }
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    cursor: pointer;
+    user-select: none;
+
+    @media (max-width: 575px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+  }
+
+  &__id-block {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    background: $ym-green-hover;
+    color: $ym-green;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  &__id-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    
+    strong {
+      font-size: 16px;
+      color: $ym-text;
+    }
+    span {
+      font-size: 13px;
+      color: $ym-text-light;
+    }
+  }
+
+  &__status-block {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  &__chevron i {
+    font-size: 24px;
+    color: $ym-text-light;
+    transition: transform 0.3s;
+  }
+
+  &--open &__chevron i {
+    transform: rotate(180deg);
+  }
+
+  &__summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 0 24px 20px;
+    align-items: center;
+
+    @media (max-width: 991px) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  &__details-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+    &--open {
+      grid-template-rows: 1fr;
+    }
+  }
+
+  &__inner-details {
+    overflow: hidden;
+    background: #fafafa;
+    border-top: 1px dashed $ym-border;
+  }
+}
+
+.ym-mo-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__label {
+    font-size: 12px;
+    color: $ym-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__val {
+    font-size: 15px;
+    font-weight: 600;
+    color: $ym-text;
+
+    &--highlight {
+      color: $ym-red;
+      font-size: 16px;
+    }
+  }
+}
+
+.ym-mo-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+// Inner Accordion Content
+.ym-mo-details-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: $ym-text;
+  padding: 24px 24px 12px;
+  margin: 0;
+}
+
+.ym-mo-items {
+  padding: 0 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ym-mo-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid $ym-border;
+
+  &__img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+
+  &__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 500;
+    color: $ym-text;
+  }
+
+  &__price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__qty {
+    font-size: 13px;
+    color: $ym-text-muted;
+  }
+
+  &__price {
+    font-size: 15px;
+    color: $ym-text;
+  }
+}
+
+// ── Tab 3: Account Activity (Timeline) ──
+.ym-acc-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 24px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e2e8f0;
+  }
+}
+
+.ym-acc-timeline__item {
+  position: relative;
+  display: flex;
+  gap: 24px;
+  padding-left: 56px;
+
+  @media (max-width: 575px) {
+    padding-left: 48px;
+    gap: 16px;
+  }
+}
+
+.ym-acc-timeline__marker {
+  position: absolute;
+  left: 8px; // 24px (line) - 16px (half width)
+  top: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 4px solid #fff; // to cut the line
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  z-index: 2;
+
+  @media (max-width: 575px) {
+    left: 9px;
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+}
+
+.ym-acc-timeline__content {
+  flex: 1;
+}
+
+.ym-acc-act-card {
+  background: #fff;
+  border: 1px solid $ym-border;
+  border-radius: $ym-acc-radius-sm;
+  padding: 20px;
+  transition: $ym-acc-transition;
+
+  &:hover {
+    box-shadow: $ym-acc-shadow-sm;
+    border-color: #cbd5e1;
+  }
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  &__time {
+    font-size: 13px;
+    color: $ym-text-light;
+  }
+
+  &__product {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: rgba(0,0,0,0.02);
+    border-radius: 6px;
+    margin: 12px 0;
+
+    img {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+  }
+
+  &__product-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: $ym-text;
+    text-decoration: none;
+    &:hover { color: $ym-green; }
+  }
+
+  &__text {
+    font-size: 14px;
+    color: $ym-text-muted;
+    line-height: 1.6;
+    margin-bottom: 0;
+
+    p { margin: 0; }
+  }
+}
+
+// Custom Chat Bubble
+.ym-acc-reply {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 0 12px 12px 12px; // chat bubble shape
+  border-left: 3px solid $ym-green;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  &__author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: $ym-text;
+  }
+
+  &__avatar {
+    width: 24px;
+    height: 24px;
+    background: $ym-green-light;
+    color: $ym-green;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  &__time {
+    font-size: 12px;
+    color: $ym-text-light;
+  }
+
+  &__text {
+    font-size: 14px;
+    color: $ym-text-muted;
+
+    p { margin: 0; line-height: 1.5; }
+  }
+}
+
+// ── View Transitions ──
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+// ── Empty States ──
+.ym-acc-empty {
+  text-align: center;
+  padding: 60px 20px;
+
+  &__icon {
+    width: 80px;
+    height: 80px;
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 20px;
+
+    &--blue { background: #e0f2fe; color: #38bdf8; }
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+
+  &__desc {
+    font-size: 14px;
+    color: $ym-text-muted;
+  }
+}

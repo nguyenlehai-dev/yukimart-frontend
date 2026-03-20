@@ -33,8 +33,10 @@ export const authApi = {
   login: (data: { email: string; password: string; recaptcha_token?: string }) => api.post('/auth/login', data),
   register: (data: Record<string, any>) => api.post('/auth/register', data),
   logout: () => api.post('/auth/logout'),
-  // Endpoint mới: lấy thông tin user từ cookie (thay cho localStorage)
   me: () => api.get('/auth/me'),
+  updateAvatar: (formData: FormData) => api.post('/auth/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 }
 
 export const healthApi = {

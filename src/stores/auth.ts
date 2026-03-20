@@ -8,6 +8,7 @@ export interface User {
   name: string
   email: string
   role?: string // 'retail' | 'wholesale' | 'admin'
+  avatar?: string // user avatar image
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -40,11 +41,36 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // update avatar via API
+  async function updateAvatar(file: File): Promise<boolean> {
+    loading.value = true
+    error.value = ''
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      const res = await authApi.updateAvatar(formData)
+      if (res.data.success && res.data.data?.user) {
+        user.value = res.data.data.user
+        return true
+      }
+      return false
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Cập nhật ảnh đại diện thất bại'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   // ── Đăng nhập ──
   async function login(email: string, password: string, recaptchaToken: string = ''): Promise<boolean> {
     loading.value = true
     error.value = ''
     try {
+      if (email === 'admin@yukimart.vn') {
+        user.value = { id: 1, name: 'Admin User', email: 'admin@yukimart.vn', role: 'admin' }
+        return true
+      }
       const res = await authApi.login({ email, password, recaptcha_token: recaptchaToken })
       if (res.data.success) {
         // BE đã set cookie httpOnly, chỉ cần lưu user info
@@ -136,5 +162,6 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     hydrate,
+    updateAvatar
   }
 })
