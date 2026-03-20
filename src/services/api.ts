@@ -6,24 +6,21 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  // Gửi cookie httpOnly tự động theo mỗi request
+  withCredentials: true,
 })
 
-// Request interceptor - Add auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('yukimart_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-// Response interceptor - Handle errors
+// Response interceptor — xử lý lỗi 401
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('yukimart_token')
-      window.location.href = '/login'
+      // BE trả 401 = chưa đăng nhập hoặc token hết hạn
+      // Không cần clear localStorage vì không dùng nữa
+      // Chỉ reload nếu đang ở trang cần auth
+      if (window.location.pathname !== '/') {
+        window.location.href = '/'
+      }
     }
     return Promise.reject(error)
   }
@@ -31,11 +28,13 @@ api.interceptors.response.use(
 
 export default api
 
-// Shared API functions (not module-specific)
+// ── API xác thực ──
 export const authApi = {
-  login: (data: { email: string; password: string }) => api.post('/auth/login', data),
+  login: (data: { email: string; password: string; recaptcha_token?: string }) => api.post('/auth/login', data),
   register: (data: Record<string, any>) => api.post('/auth/register', data),
   logout: () => api.post('/auth/logout'),
+  // Endpoint mới: lấy thông tin user từ cookie (thay cho localStorage)
+  me: () => api.get('/auth/me'),
 }
 
 export const healthApi = {

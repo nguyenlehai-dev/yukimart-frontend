@@ -1,0 +1,83 @@
+@use '../variables' as *;
+
+// ── Floating Logo bên trái ──
+.ym-floating-logo {
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 999;
+  will-change: top;
+
+  &--hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  img {
+    width: 12vw;
+    height: auto;
+    border-radius: 12px;
+  }
+
+  @media (max-width: 767.98px) {
+    display: none;
+  }
+}
+
+.ym-floating-actions {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 999;
+
+  &__btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+
+    &:hover {
+      transform: scale(1.12);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    &--fb {
+      background: #1877F2;
+      font-size: 22px;
+    }
+
+    &--mail {
+      background: #EA4335;
+      font-size: 20px;
+    }
+
+    &--phone {
+      background: $ym-green;
+      font-size: 22px;
+      animation: phone-ring 2s infinite ease-in-out;
+    }
+  }
+}
+
+@keyframes phone-ring {
+  0%, 100% { transform: rotate(0deg); }
+  5% { transform: rotate(15deg); }
+  10% { transform: rotate(-13deg); }
+  15% { transform: rotate(14deg); }
+  20% { transform: rotate(-12deg); }
+  25% { transform: rotate(10deg); }
+  30% { transform: rotate(0deg); }
+}
