@@ -4,13 +4,13 @@ import { hereSideBanners } from '../configs'
 
 <template>
   <div class="ym-side-banners">
-    <a
+    <RouterLink
       v-for="banner in hereSideBanners"
       :key="banner.id"
-      :href="banner.link"
+      :to="banner.link"
       class="ym-side-banners__item"
     >
       <img :src="banner.image" alt="" />
-    </a>
+    </RouterLink>
   </div>
 </template>

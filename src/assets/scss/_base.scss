@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use 'variables' as *;
 
 // ── Reset / Base ──
@@ -12,7 +13,7 @@ html, body {
 }
 
 body {
-  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: $ym-text;
   background: $ym-bg;
   -webkit-font-smoothing: antialiased;
@@ -40,7 +41,7 @@ img {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba($ym-green, 0);
+  background: color.change($ym-green, $alpha: 0);
   border-radius: 10px;
   transition: background 0.3s;
 }
@@ -48,11 +49,11 @@ img {
 // Show scrollbar thumb only on hover/scroll
 *:hover::-webkit-scrollbar-thumb,
 *:active::-webkit-scrollbar-thumb {
-  background: rgba($ym-green, 0.45);
+  background: color.change($ym-green, $alpha: 0.45);
 }
 
 *:hover::-webkit-scrollbar-thumb:hover {
-  background: rgba($ym-green, 0.7);
+  background: color.change($ym-green, $alpha: 0.7);
 }
 
 // Firefox
@@ -62,5 +63,5 @@ img {
 }
 
 *:hover {
-  scrollbar-color: rgba($ym-green, 0.45) transparent;
+  scrollbar-color: color.change($ym-green, $alpha: 0.45) transparent;
 }

@@ -1,0 +1,368 @@
+@use 'sass:color';
+@use '../variables' as *;
+
+.ym-news {
+  padding: 20px 0 40px;
+  background-color: #f5f5f5;
+
+  .container {
+    background: #fff;
+    border-radius: 0;
+    padding: 20px;
+  }
+}
+
+// ── Intro ──
+.ym-news__intro {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.ym-news__page-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: $ym-text;
+  margin: 0 0 10px;
+}
+
+.ym-news__intro p {
+  font-size: 13px;
+  color: $ym-text-muted;
+  line-height: 1.6;
+  margin: 0 0 6px;
+}
+
+// ── Layout: main + sidebar ──
+.ym-news__layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+}
+
+// ── Article cards (listing) ──
+.ym-news__card {
+  display: flex;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+  text-decoration: none;
+  transition: background 0.2s;
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  &:hover {
+    .ym-news__card-title { color: $ym-green; }
+  }
+}
+
+.ym-news__card-img {
+  flex-shrink: 0;
+  width: 260px;
+  height: 160px;
+  overflow: hidden;
+  border-radius: 4px;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.ym-news__card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ym-news__card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: $ym-text;
+  margin: 0 0 8px;
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+.ym-news__card-excerpt {
+  font-size: 13px;
+  color: $ym-text-muted;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.ym-news__card-comments {
+  font-size: 11px;
+  color: $ym-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// ── Sidebar ──
+.ym-news__sidebar-box {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.ym-news__sidebar-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: $ym-text;
+  margin: 0 0 12px;
+}
+
+.ym-news__sidebar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li { margin-bottom: 6px; }
+
+  a {
+    font-size: 13px;
+    color: $ym-text-muted;
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover { color: $ym-green; }
+  }
+}
+
+// ── Recent posts ──
+.ym-news__recent-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  text-decoration: none;
+
+  &:hover {
+    .ym-news__recent-title { color: $ym-green; }
+  }
+}
+
+.ym-news__recent-img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.ym-news__recent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ym-news__recent-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: $ym-text;
+  line-height: 1.3;
+  transition: color 0.2s;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ym-news__recent-comments {
+  font-size: 11px;
+  color: $ym-text-muted;
+}
+
+// ── Article detail ──
+.ym-news__detail {
+  padding-bottom: 24px;
+  border-bottom: 1px solid #eee;
+}
+
+.ym-news__detail-meta {
+  margin-bottom: 8px;
+}
+
+.ym-news__detail-category {
+  font-size: 11px;
+  color: $ym-green;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.ym-news__detail-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: $ym-text;
+  margin: 0 0 8px;
+  line-height: 1.3;
+}
+
+.ym-news__detail-date {
+  font-size: 12px;
+  color: $ym-text-muted;
+  margin: 0 0 20px;
+  font-style: italic;
+
+  strong {
+    color: $ym-text;
+    font-weight: 600;
+  }
+}
+
+.ym-news__detail-content {
+  font-size: 14px;
+  color: $ym-text;
+  line-height: 1.8;
+
+  p {
+    margin: 0 0 14px;
+  }
+
+  strong {
+    color: $ym-text;
+  }
+}
+
+.ym-news__detail-share {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+
+  a {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    color: $ym-text-muted;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-size: 14px;
+
+    &:hover {
+      background: $ym-green;
+      border-color: $ym-green;
+      color: #fff;
+    }
+  }
+}
+
+// ── Comment form ──
+.ym-news__comment-form {
+  margin-top: 30px;
+  padding: 24px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: $ym-text;
+    margin: 0 0 8px;
+  }
+}
+
+.ym-news__comment-note {
+  font-size: 12px;
+  color: $ym-text-muted;
+  margin: 0 0 16px;
+  font-style: italic;
+}
+
+.ym-news__comment-field {
+  margin-bottom: 14px;
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: $ym-text;
+    margin-bottom: 4px;
+  }
+
+  textarea,
+  input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: $ym-green;
+    }
+  }
+}
+
+.ym-news__comment-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.ym-news__comment-submit {
+  padding: 10px 24px;
+  background: $ym-green;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: color.adjust($ym-green, $lightness: -8%);
+  }
+}
+
+// ── Responsive ──
+@media (max-width: 991.98px) {
+  .ym-news__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ym-news__card-img {
+    width: 200px;
+    height: 130px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ym-news {
+    padding: 10px 0 20px;
+
+    .container { padding: 12px; }
+  }
+
+  .ym-news__card {
+    flex-direction: column;
+  }
+
+  .ym-news__card-img {
+    width: 100%;
+    height: 180px;
+  }
+
+  .ym-news__detail-title {
+    font-size: 18px;
+  }
+
+  .ym-news__comment-row {
+    grid-template-columns: 1fr;
+  }
+}

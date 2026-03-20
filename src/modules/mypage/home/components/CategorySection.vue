@@ -57,9 +57,9 @@ const activeTab = ref(0)
               <div class="ym-cat-section__banner-overlay">
                 <strong>{{ banner.title }}</strong>
                 <span>{{ banner.subtitle }}</span>
-                <a :href="banner.link" class="ym-cat-section__banner-link" :style="{ color: section.color }">
+                <RouterLink :to="banner.link" class="ym-cat-section__banner-link" :style="{ color: section.color }">
                   Mua ngay <i class="ri-arrow-right-line"></i>
-                </a>
+                </RouterLink>
               </div>
             </div>
           </div>
