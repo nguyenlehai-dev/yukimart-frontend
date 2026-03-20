@@ -4,7 +4,7 @@
  * Hiện widget "Tôi không phải robot" trong form auth.
  * User phải check vào → mới được submit.
  *
- * Script api.js đã được load từ index.html.
+ * Đã fix: tracking widget state để tránh lỗi "already rendered".
  */
 
 import { ref } from 'vue'
@@ -15,10 +15,11 @@ export function useRecaptchaCheckbox(containerId: string) {
   const token = ref('')
   const isVerified = ref(false)
   let widgetId: number | null = null
+  let isRendered = false
 
   /**
    * Render checkbox widget vào container.
-   * Gọi sau khi DOM đã sẵn sàng (onMounted hoặc nextTick).
+   * Nếu đã render rồi → chỉ reset, không render lại.
    */
   function render() {
     if (!SITE_KEY) return
@@ -33,26 +34,47 @@ export function useRecaptchaCheckbox(containerId: string) {
       const container = document.getElementById(containerId)
       if (!container) return
 
-      // Xóa widget cũ nếu có
-      container.innerHTML = ''
+      // Đã render rồi → chỉ reset
+      if (isRendered && widgetId !== null) {
+        try {
+          grc.reset(widgetId)
+          token.value = ''
+          isVerified.value = false
+        } catch {
+          // Widget bị xóa khỏi DOM → render lại
+          isRendered = false
+          widgetId = null
+        }
+      }
 
-      widgetId = grc.render(containerId, {
-        sitekey: SITE_KEY,
-        callback: (response: string) => {
-          token.value = response
-          isVerified.value = true
-        },
-        'expired-callback': () => {
-          token.value = ''
-          isVerified.value = false
-        },
-        'error-callback': () => {
-          token.value = ''
-          isVerified.value = false
-        },
-        theme: 'light',
-        size: 'normal',
-      })
+      // Chưa render → render mới
+      if (!isRendered) {
+        // Xóa nội dung cũ
+        container.innerHTML = ''
+
+        try {
+          widgetId = grc.render(containerId, {
+            sitekey: SITE_KEY,
+            callback: (response: string) => {
+              token.value = response
+              isVerified.value = true
+            },
+            'expired-callback': () => {
+              token.value = ''
+              isVerified.value = false
+            },
+            'error-callback': () => {
+              token.value = ''
+              isVerified.value = false
+            },
+            theme: 'light',
+            size: 'normal',
+          })
+          isRendered = true
+        } catch (e) {
+          console.warn('reCAPTCHA render error:', e)
+        }
+      }
     })
   }
 
@@ -73,6 +95,22 @@ export function useRecaptchaCheckbox(containerId: string) {
     }
   }
 
+  /**
+   * Destroy widget — gọi khi modal đóng hoàn toàn.
+   * Cho phép render lại khi modal mở lần sau.
+   */
+  function destroy() {
+    token.value = ''
+    isVerified.value = false
+    widgetId = null
+    isRendered = false
+
+    const container = document.getElementById(containerId)
+    if (container) {
+      container.innerHTML = ''
+    }
+  }
+
   const isEnabled = !!SITE_KEY
 
   return {
@@ -81,5 +119,6 @@ export function useRecaptchaCheckbox(containerId: string) {
     isEnabled,
     render,
     reset,
+    destroy,
   }
 }

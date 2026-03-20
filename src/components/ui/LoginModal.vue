@@ -42,6 +42,10 @@ const regSuccess = ref('')
 function close() {
   emit('update:modelValue', false)
   resetForms()
+  // Destroy reCAPTCHA widgets khi đóng modal
+  // để cho phép render lại khi mở lần sau
+  loginRecaptcha.destroy()
+  registerRecaptcha.destroy()
 }
 
 function resetForms() {
@@ -55,8 +59,6 @@ function resetForms() {
   localError.value = ''
   regSuccess.value = ''
   authStore.error = ''
-  loginRecaptcha.reset()
-  registerRecaptcha.reset()
 }
 
 async function handleLogin() {
@@ -79,10 +81,8 @@ async function handleLogin() {
     close()
     emit('loggedIn')
   } else {
-    // Reset reCAPTCHA khi login thất bại
+    // Reset reCAPTCHA khi login thất bại (không render lại)
     loginRecaptcha.reset()
-    // Render lại widget sau 100ms
-    setTimeout(() => loginRecaptcha.render(), 100)
   }
 }
 
@@ -130,8 +130,8 @@ async function handleRegister() {
       email.value = regEmail.value
     }
   } else {
+    // Reset reCAPTCHA khi register thất bại (không render lại)
     registerRecaptcha.reset()
-    setTimeout(() => registerRecaptcha.render(), 100)
   }
 }
 
@@ -150,11 +150,13 @@ watch(() => props.modelValue, async (isOpen) => {
   }
 })
 
-// Render lại khi chuyển tab
+// Render lại khi chuyển tab (chỉ khi modal đang mở)
 watch(activeTab, async () => {
   localError.value = ''
   regSuccess.value = ''
   authStore.error = ''
+
+  if (!props.modelValue) return
 
   await nextTick()
   setTimeout(() => {
