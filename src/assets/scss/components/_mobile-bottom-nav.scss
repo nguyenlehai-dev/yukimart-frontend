@@ -1,0 +1,239 @@
+@use '../variables' as *;
+
+// ── Mobile Bottom Navigation ──
+// Only visible on screens <= 767px
+
+.ym-bottom-nav {
+  display: none; // Hidden on desktop
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #fff;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+  z-index: 9000;
+  padding: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px); // iPhone notch
+
+  @media (max-width: 767.98px) {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+  }
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex: 1;
+    text-decoration: none;
+    color: #888;
+    font-size: 10px;
+    padding: 6px 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+
+    i {
+      font-size: 22px;
+      transition: color 0.2s;
+    }
+
+    span {
+      font-weight: 500;
+      letter-spacing: 0.2px;
+    }
+
+    &.active,
+    &:active {
+      color: $ym-green;
+
+      i { color: $ym-green; }
+    }
+
+    // ── Center elevated button ──
+    &--center {
+      position: relative;
+
+      .ym-bottom-nav__center-btn {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, $ym-green, darken($ym-green, 8%));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -22px;
+        box-shadow: 0 3px 12px rgba($ym-green, 0.35);
+        transition: transform 0.2s, box-shadow 0.2s;
+
+        i {
+          font-size: 24px;
+          color: #fff;
+        }
+      }
+
+      &:active .ym-bottom-nav__center-btn {
+        transform: scale(0.93);
+        box-shadow: 0 2px 8px rgba($ym-green, 0.25);
+      }
+
+      span {
+        color: $ym-green;
+        font-weight: 600;
+        margin-top: 2px;
+      }
+    }
+  }
+
+  // ── Cart badge ──
+  &__badge-wrap {
+    position: relative;
+  }
+
+  &__badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    background: $ym-red;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+  }
+}
+
+// Add bottom padding to main content on mobile to avoid nav overlap
+@media (max-width: 767.98px) {
+  .ym-main {
+    padding-bottom: 70px;
+  }
+}
+
+// ── Mobile Account Bottom Sheet ──
+.ym-mobile-account-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 9998;
+}
+
+.ym-mobile-account {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  z-index: 9999;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 20px 16px;
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border-radius: 20px 20px 0 0;
+  }
+
+  &__avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, $ym-green, darken($ym-green, 12%));
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    flex: 1;
+
+    strong {
+      display: block;
+      font-size: 16px;
+      color: #333;
+    }
+    small {
+      font-size: 12px;
+      color: $ym-green;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #666;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  &__menu {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+
+    li a {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      font-size: 15px;
+      color: #333;
+      text-decoration: none;
+      transition: background 0.15s;
+
+      i {
+        font-size: 20px;
+        color: #888;
+        width: 24px;
+        text-align: center;
+      }
+
+      &:active {
+        background: #f5f5f5;
+      }
+    }
+  }
+
+  &__divider {
+    height: 1px;
+    background: #eee;
+    margin: 0 20px;
+  }
+
+  &__logout {
+    color: #e74c3c !important;
+    i { color: #e74c3c !important; }
+  }
+}
+
+// Slide-up animation
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.3s ease;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}

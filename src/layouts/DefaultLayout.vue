@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router'
 import { navLinks, categoryMenuItems } from '../modules/mypage/home/configs'
 import { useCartStore } from '../stores/cart'
@@ -8,11 +8,24 @@ import LoginModal from '../components/ui/LoginModal.vue'
 import TrustBadges from '../components/common/TrustBadges.vue'
 import BackToTop from '../components/common/BackToTop.vue'
 import FloatingActions from '../components/common/FloatingActions.vue'
+import MobileBottomNav from '../components/common/MobileBottomNav.vue'
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+
+// ── Click-outside for user dropdown ──
+const userWrapRef = ref<HTMLElement | null>(null)
+
+function onDocClick(e: MouseEvent) {
+  if (userWrapRef.value && !userWrapRef.value.contains(e.target as Node)) {
+    showUserDropdown.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', onDocClick))
+onUnmounted(() => document.removeEventListener('click', onDocClick))
 
 const isHomePage = computed(() => route.path === '/')
 
@@ -54,17 +67,40 @@ function handleCartClick() {
 
 function handleLoginClick() {
   if (authStore.isLoggedIn) {
-    authStore.logout()
+    showUserDropdown.value = !showUserDropdown.value
   } else {
     openLoginModal('')
   }
 }
+
+// ── User dropdown ──
+const showUserDropdown = ref(false)
+
+function closeUserDropdown() {
+  showUserDropdown.value = false
+}
+
+function handleLogout() {
+  authStore.logout()
+  showUserDropdown.value = false
+  showMobileAccount.value = false
+}
+
+// ── Mobile account panel ──
+const showMobileAccount = ref(false)
 
 function onLoggedIn() {
   if (loginRedirectTo.value) {
     router.push(loginRedirectTo.value)
   }
 }
+
+// Tên viết tắt (lấy chữ cái đầu)
+const userInitial = computed(() => {
+  const name = authStore.userName
+  if (!name) return '?'
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+})
 </script>
 
 <template>
@@ -128,13 +164,42 @@ function onLoggedIn() {
             </div>
             <span class="ym-header__action-text">Giỏ<br/>hàng</span>
           </a>
-          <a href="#" class="ym-header__action ym-header__action--login" @click.prevent="handleLoginClick">
-            <template v-if="authStore.isLoggedIn">
-              <i class="ri-user-fill"></i> {{ authStore.userName }}
-            </template>
-            <template v-else>
-              ĐĂNG NHẬP / ĐĂNG KÝ
-            </template>
+          <!-- User area -->
+          <div v-if="authStore.isLoggedIn" class="ym-header__user-wrap" ref="userWrapRef">
+            <a href="#" class="ym-header__action ym-header__action--login" @click.prevent="handleLoginClick">
+              <span class="ym-header__user-avatar">{{ userInitial }}</span>
+              <span class="ym-header__user-name">{{ authStore.userName }}</span>
+              <i class="ri-arrow-down-s-line"></i>
+            </a>
+            <!-- Dropdown -->
+            <Transition name="dropdown">
+              <div v-if="showUserDropdown" class="ym-user-dropdown">
+                <div class="ym-user-dropdown__header">
+                  <span class="ym-user-dropdown__avatar">{{ userInitial }}</span>
+                  <div class="ym-user-dropdown__info">
+                    <strong>{{ authStore.userName }}</strong>
+                    <small>{{ authStore.userRole === 'wholesale' ? 'Khách sỉ' : 'Thành viên' }}</small>
+                  </div>
+                </div>
+                <div class="ym-user-dropdown__divider"></div>
+                <p class="ym-user-dropdown__welcome">
+                  Xin chào, <strong>{{ authStore.userName }}</strong>!
+                </p>
+                <ul class="ym-user-dropdown__menu">
+                  <li><a href="#" @click.prevent="closeUserDropdown"><i class="ri-user-line"></i> Tài khoản</a></li>
+                  <li><a href="#" @click.prevent="closeUserDropdown"><i class="ri-shopping-bag-line"></i> Đơn hàng</a></li>
+                  <li><a href="#" @click.prevent="closeUserDropdown"><i class="ri-heart-line"></i> Yêu thích</a></li>
+                  <li><a href="#" @click.prevent="closeUserDropdown"><i class="ri-settings-3-line"></i> Cài đặt</a></li>
+                </ul>
+                <div class="ym-user-dropdown__divider"></div>
+                <ul class="ym-user-dropdown__menu">
+                  <li><a href="#" class="ym-user-dropdown__logout" @click.prevent="handleLogout"><i class="ri-logout-box-r-line"></i> Đăng xuất</a></li>
+                </ul>
+              </div>
+            </Transition>
+          </div>
+          <a v-else href="#" class="ym-header__action ym-header__action--login" @click.prevent="handleLoginClick">
+            ĐĂNG NHẬP / ĐĂNG KÝ
           </a>
         </div>
       </div>
@@ -230,6 +295,44 @@ function onLoggedIn() {
 
     <!-- Floating Contact Buttons -->
     <FloatingActions />
+
+    <!-- Mobile Bottom Navigation -->
+    <MobileBottomNav
+      @open-login="openLoginModal('')"
+      @open-category="toggleCategoryDrawer"
+      @open-account="showMobileAccount = !showMobileAccount"
+    />
+
+    <!-- Mobile Account Bottom Sheet -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showMobileAccount" class="ym-mobile-account-overlay" @click="showMobileAccount = false"></div>
+      </Transition>
+      <Transition name="slide-up">
+        <div v-if="showMobileAccount" class="ym-mobile-account">
+          <div class="ym-mobile-account__header">
+            <span class="ym-mobile-account__avatar">{{ userInitial }}</span>
+            <div class="ym-mobile-account__info">
+              <strong>{{ authStore.userName }}</strong>
+              <small>{{ authStore.userRole === 'wholesale' ? 'Khách sỉ' : 'Thành viên' }}</small>
+            </div>
+            <button class="ym-mobile-account__close" @click="showMobileAccount = false">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+          <ul class="ym-mobile-account__menu">
+            <li><a href="#" @click.prevent="showMobileAccount = false"><i class="ri-user-line"></i> Tài khoản</a></li>
+            <li><a href="#" @click.prevent="showMobileAccount = false"><i class="ri-shopping-bag-line"></i> Đơn hàng</a></li>
+            <li><a href="#" @click.prevent="showMobileAccount = false"><i class="ri-heart-line"></i> Yêu thích</a></li>
+            <li><a href="#" @click.prevent="showMobileAccount = false"><i class="ri-settings-3-line"></i> Cài đặt</a></li>
+          </ul>
+          <div class="ym-mobile-account__divider"></div>
+          <ul class="ym-mobile-account__menu">
+            <li><a href="#" class="ym-mobile-account__logout" @click.prevent="handleLogout"><i class="ri-logout-box-r-line"></i> Đăng xuất</a></li>
+          </ul>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Footer -->
     <footer class="ym-footer">
