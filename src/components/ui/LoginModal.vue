@@ -27,12 +27,14 @@ const activeTab = ref<AuthTab>('login')
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
+const showLoginPassword = ref(false)
 
 // Register fields
 const regName = ref('')
 const regEmail = ref('')
 const regPassword = ref('')
 const regConfirmPassword = ref('')
+const showRegPassword = ref(false)
 
 // Local error (validation before API)
 const localError = ref('')
@@ -173,30 +175,44 @@ watch(activeTab, async () => {
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="modelValue" class="ym-auth-overlay" @click.self="close">
-        <div class="ym-auth-modal">
+        <div class="ym-auth-modal" role="dialog" aria-modal="true" aria-labelledby="ym-auth-title">
           <!-- Close button -->
-          <button class="ym-auth-modal__close" @click="close">&times;</button>
+          <button type="button" class="ym-auth-modal__close" aria-label="Đóng" @click="close">
+            <i class="ri-close-line" aria-hidden="true"></i>
+          </button>
 
           <div class="ym-auth-modal__inner">
             <!-- ═══ Left: Form side ═══ -->
             <div class="ym-auth-modal__form-side">
               <!-- Logo -->
               <div class="ym-auth-modal__logo">
-                <div class="ym-auth-modal__logo-icon">
+                <div class="ym-auth-modal__logo-icon" aria-hidden="true">
                   <i class="ri-leaf-line"></i>
                 </div>
-                <h4>Chào mừng đến YukiMart</h4>
+                <h4 id="ym-auth-title">Chào mừng đến YukiMart</h4>
               </div>
 
               <!-- Tab switcher -->
-              <div class="ym-auth-modal__tabs">
+              <div class="ym-auth-modal__tabs" role="tablist" aria-label="Chọn đăng nhập hoặc đăng ký">
                 <button
+                  type="button"
+                  role="tab"
+                  id="auth-tab-login"
+                  aria-controls="auth-panel-login"
+                  :aria-selected="activeTab === 'login'"
+                  :tabindex="activeTab === 'login' ? 0 : -1"
                   :class="['ym-auth-modal__tab', { active: activeTab === 'login' }]"
                   @click="activeTab = 'login'"
                 >
                   Đăng nhập
                 </button>
                 <button
+                  type="button"
+                  role="tab"
+                  id="auth-tab-register"
+                  aria-controls="auth-panel-register"
+                  :aria-selected="activeTab === 'register'"
+                  :tabindex="activeTab === 'register' ? 0 : -1"
                   :class="['ym-auth-modal__tab', { active: activeTab === 'register' }]"
                   @click="activeTab = 'register'"
                 >
@@ -205,17 +221,20 @@ watch(activeTab, async () => {
               </div>
 
               <!-- Success message -->
-              <p v-if="regSuccess" class="ym-auth-modal__success">
-                <i class="ri-check-line"></i> {{ regSuccess }}
+              <p v-if="regSuccess" class="ym-auth-modal__success" role="status">
+                <i class="ri-check-line" aria-hidden="true"></i> {{ regSuccess }}
               </p>
 
               <!-- ── Login form ── -->
               <form
                 v-if="activeTab === 'login'"
+                id="auth-panel-login"
+                role="tabpanel"
+                aria-labelledby="auth-tab-login"
                 class="ym-auth-modal__form"
                 @submit.prevent="handleLogin"
               >
-                <p v-if="localError || authStore.error" class="ym-auth-modal__error">
+                <p v-if="localError || authStore.error" class="ym-auth-modal__error" role="alert">
                   {{ localError || authStore.error }}
                 </p>
 
@@ -225,20 +244,35 @@ watch(activeTab, async () => {
                     id="auth-login-email"
                     v-model="email"
                     type="text"
+                    autocomplete="username"
                     placeholder="Nhập email hoặc số điện thoại"
                     :disabled="authStore.loading"
+                    required
                   />
                 </div>
 
                 <div class="ym-auth-modal__field">
                   <label for="auth-login-password">Mật khẩu</label>
-                  <input
-                    id="auth-login-password"
-                    v-model="password"
-                    type="password"
-                    placeholder="Nhập mật khẩu"
-                    :disabled="authStore.loading"
-                  />
+                  <div class="ym-auth-modal__password-wrap">
+                    <input
+                      id="auth-login-password"
+                      v-model="password"
+                      :type="showLoginPassword ? 'text' : 'password'"
+                      autocomplete="current-password"
+                      placeholder="Nhập mật khẩu"
+                      :disabled="authStore.loading"
+                      required
+                    />
+                    <button
+                      type="button"
+                      class="ym-auth-modal__password-toggle"
+                      :aria-label="showLoginPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                      :aria-pressed="showLoginPassword"
+                      @click="showLoginPassword = !showLoginPassword"
+                    >
+                      <i :class="showLoginPassword ? 'ri-eye-off-line' : 'ri-eye-line'" aria-hidden="true"></i>
+                    </button>
+                  </div>
                 </div>
 
                 <div class="ym-auth-modal__options">
@@ -246,7 +280,7 @@ watch(activeTab, async () => {
                     <input v-model="rememberMe" type="checkbox" />
                     Ghi nhớ đăng nhập
                   </label>
-                  <a href="#" class="ym-auth-modal__forgot">Quên mật khẩu?</a>
+                  <a href="/forgot-password" class="ym-auth-modal__forgot">Quên mật khẩu?</a>
                 </div>
 
                 <!-- ✅ reCAPTCHA checkbox -->
@@ -258,24 +292,28 @@ watch(activeTab, async () => {
                   type="submit"
                   class="ym-auth-modal__submit"
                   :disabled="authStore.loading"
+                  :aria-busy="authStore.loading || undefined"
                 >
-                  <span v-if="authStore.loading" class="ym-auth-modal__spinner"></span>
+                  <span v-if="authStore.loading" class="ym-auth-modal__spinner" aria-hidden="true"></span>
                   {{ authStore.loading ? 'Đang xử lý...' : 'Đăng nhập' }}
                 </button>
 
                 <p class="ym-auth-modal__switch">
                   Bạn chưa có tài khoản?
-                  <a href="#" @click.prevent="activeTab = 'register'">Đăng ký ngay</a>
+                  <button type="button" class="ym-auth-modal__link" @click="activeTab = 'register'">Đăng ký ngay</button>
                 </p>
               </form>
 
               <!-- ── Register form ── -->
               <form
                 v-else
+                id="auth-panel-register"
+                role="tabpanel"
+                aria-labelledby="auth-tab-register"
                 class="ym-auth-modal__form"
                 @submit.prevent="handleRegister"
               >
-                <p v-if="localError || authStore.error" class="ym-auth-modal__error">
+                <p v-if="localError || authStore.error" class="ym-auth-modal__error" role="alert">
                   {{ localError || authStore.error }}
                 </p>
 
@@ -285,8 +323,10 @@ watch(activeTab, async () => {
                     id="auth-reg-name"
                     v-model="regName"
                     type="text"
+                    autocomplete="name"
                     placeholder="Nhập họ và tên"
                     :disabled="authStore.loading"
+                    required
                   />
                 </div>
 
@@ -296,20 +336,39 @@ watch(activeTab, async () => {
                     id="auth-reg-email"
                     v-model="regEmail"
                     type="email"
+                    autocomplete="email"
+                    inputmode="email"
                     placeholder="Nhập địa chỉ email"
                     :disabled="authStore.loading"
+                    required
                   />
                 </div>
 
                 <div class="ym-auth-modal__field">
                   <label for="auth-reg-password">Mật khẩu</label>
-                  <input
-                    id="auth-reg-password"
-                    v-model="regPassword"
-                    type="password"
-                    placeholder="Tạo mật khẩu (ít nhất 6 ký tự)"
-                    :disabled="authStore.loading"
-                  />
+                  <div class="ym-auth-modal__password-wrap">
+                    <input
+                      id="auth-reg-password"
+                      v-model="regPassword"
+                      :type="showRegPassword ? 'text' : 'password'"
+                      autocomplete="new-password"
+                      placeholder="Tạo mật khẩu (ít nhất 6 ký tự)"
+                      minlength="6"
+                      :disabled="authStore.loading"
+                      :aria-describedby="'auth-reg-password-hint'"
+                      required
+                    />
+                    <button
+                      type="button"
+                      class="ym-auth-modal__password-toggle"
+                      :aria-label="showRegPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                      :aria-pressed="showRegPassword"
+                      @click="showRegPassword = !showRegPassword"
+                    >
+                      <i :class="showRegPassword ? 'ri-eye-off-line' : 'ri-eye-line'" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                  <small id="auth-reg-password-hint" class="ym-auth-modal__hint">Tối thiểu 6 ký tự</small>
                 </div>
 
                 <div class="ym-auth-modal__field">
@@ -317,16 +376,18 @@ watch(activeTab, async () => {
                   <input
                     id="auth-reg-confirm"
                     v-model="regConfirmPassword"
-                    type="password"
+                    :type="showRegPassword ? 'text' : 'password'"
+                    autocomplete="new-password"
                     placeholder="Nhập lại mật khẩu"
                     :disabled="authStore.loading"
+                    required
                   />
                 </div>
 
                 <p class="ym-auth-modal__privacy">
                   Dữ liệu của bạn sẽ được sử dụng để hỗ trợ trải nghiệm trên website,
                   quản lý truy cập tài khoản và các mục đích khác theo
-                  <a href="#">chính sách riêng tư</a>.
+                  <a href="/privacy">chính sách riêng tư</a>.
                 </p>
 
                 <!-- ✅ reCAPTCHA checkbox -->
@@ -338,23 +399,24 @@ watch(activeTab, async () => {
                   type="submit"
                   class="ym-auth-modal__submit"
                   :disabled="authStore.loading"
+                  :aria-busy="authStore.loading || undefined"
                 >
-                  <span v-if="authStore.loading" class="ym-auth-modal__spinner"></span>
+                  <span v-if="authStore.loading" class="ym-auth-modal__spinner" aria-hidden="true"></span>
                   {{ authStore.loading ? 'Đang xử lý...' : 'Đăng ký' }}
                 </button>
 
                 <p class="ym-auth-modal__switch">
                   Đã có tài khoản?
-                  <a href="#" @click.prevent="activeTab = 'login'">Đăng nhập</a>
+                  <button type="button" class="ym-auth-modal__link" @click="activeTab = 'login'">Đăng nhập</button>
                 </p>
               </form>
             </div>
 
             <!-- ═══ Right: Branding side ═══ -->
-            <div class="ym-auth-modal__brand-side">
+            <aside class="ym-auth-modal__brand-side" aria-hidden="true">
               <div class="ym-auth-modal__brand-content">
                 <i class="ri-shield-check-line ym-auth-modal__brand-icon"></i>
-                <h4>Mua sắm an toàn & tiện lợi</h4>
+                <h4>Mua sắm an toàn &amp; tiện lợi</h4>
                 <p>
                   YukiMart cam kết mang đến trải nghiệm mua sắm tuyệt vời với
                   hàng nghìn sản phẩm chính hãng, giao hàng nhanh chóng và
@@ -367,7 +429,7 @@ watch(activeTab, async () => {
                   <li><i class="ri-check-line"></i> Thanh toán an toàn</li>
                 </ul>
               </div>
-            </div>
+            </aside>
           </div>
         </div>
       </div>

@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use '../variables' as *;
 
 // ── Mobile Bottom Navigation ──
@@ -64,7 +65,7 @@
         width: 46px;
         height: 46px;
         border-radius: 50%;
-        background: linear-gradient(135deg, $ym-green, darken($ym-green, 8%));
+        background: linear-gradient(135deg, $ym-green, color.adjust($ym-green, $lightness: -8%));
         display: flex;
         align-items: center;
         justify-content: center;
@@ -153,7 +154,7 @@
     width: 46px;
     height: 46px;
     border-radius: 50%;
-    background: linear-gradient(135deg, $ym-green, darken($ym-green, 12%));
+    background: linear-gradient(135deg, $ym-green, color.adjust($ym-green, $lightness: -12%));
     color: #fff;
     font-size: 16px;
     font-weight: 700;
@@ -193,7 +194,8 @@
     margin: 0;
     padding: 8px 0;
 
-    li a {
+    li a,
+    li .ym-mobile-account__item-btn {
       display: flex;
       align-items: center;
       gap: 14px;
@@ -202,6 +204,12 @@
       color: #333;
       text-decoration: none;
       transition: background 0.15s;
+      width: 100%;
+      background: none;
+      border: none;
+      font-family: inherit;
+      text-align: left;
+      cursor: pointer;
 
       i {
         font-size: 20px;
@@ -212,6 +220,12 @@
 
       &:active {
         background: #f5f5f5;
+      }
+
+      &:focus { outline: none; }
+      &:focus-visible {
+        background: #f5f5f5;
+        box-shadow: inset 3px 0 0 $ym-green;
       }
     }
   }

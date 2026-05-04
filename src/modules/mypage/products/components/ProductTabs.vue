@@ -31,7 +31,10 @@ function scrollToSection(key: string) {
   if (el) {
     const offset = 100 // sticky nav height
     const y = el.getBoundingClientRect().top + window.scrollY - offset
-    window.scrollTo({ top: y, behavior: 'smooth' })
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ top: y, behavior: reduce ? 'auto' : 'smooth' })
+    el.setAttribute('tabindex', '-1')
+    el.focus({ preventScroll: true })
   }
 }
 
@@ -115,11 +118,13 @@ function addToCart() {
     <!-- Sentinel for sticky detection -->
     <div ref="tabNavEl" class="ym-pdp-tabs__sentinel"></div>
 
-    <!-- Tab navigation (inline) -->
-    <div class="ym-pdp-tabs__nav">
+    <!-- Tab navigation (inline, scroll-spy style) -->
+    <nav class="ym-pdp-tabs__nav" aria-label="Mục lục sản phẩm">
       <button
         v-for="tab in tabs"
         :key="tab.key"
+        type="button"
+        :aria-current="tab.key === activeSection ? 'true' : undefined"
         :class="['ym-pdp-tabs__nav-btn', { 'ym-pdp-tabs__nav-btn--active': tab.key === activeSection }]"
         @click="scrollToSection(tab.key)"
       >
@@ -127,7 +132,7 @@ function addToCart() {
         <span v-if="tab.key === 'reviews'" class="ym-pdp-tabs__nav-count">({{ product.ratingCount }})</span>
         <span v-if="tab.key === 'qa'" class="ym-pdp-tabs__nav-count">({{ product.questionCount }})</span>
       </button>
-    </div>
+    </nav>
 
     <!-- Sticky bar (appears on scroll) -->
     <Transition name="slide-down">
@@ -146,14 +151,16 @@ function addToCart() {
             <button
               v-for="tab in tabs"
               :key="tab.key"
+              type="button"
+              :aria-current="tab.key === activeSection ? 'true' : undefined"
               :class="['ym-pdp-stickybar__nav-btn', { 'ym-pdp-stickybar__nav-btn--active': tab.key === activeSection }]"
               @click="scrollToSection(tab.key)"
             >
               {{ tab.label }}
             </button>
           </div>
-          <button class="ym-pdp-stickybar__cart-btn" @click="addToCart">
-            <i class="ri-shopping-cart-fill"></i> THÊM VÀO GIỎ HÀNG
+          <button type="button" class="ym-pdp-stickybar__cart-btn" :aria-label="`Thêm ${product.name} vào giỏ hàng`" @click="addToCart">
+            <i class="ri-shopping-cart-fill" aria-hidden="true"></i> THÊM VÀO GIỎ HÀNG
           </button>
         </div>
       </div>
@@ -162,10 +169,11 @@ function addToCart() {
     <!-- All sections shown at once -->
     <div class="ym-pdp-tabs__content">
       <!-- Mô tả -->
-      <section id="section-description" class="ym-pdp-tabs__section">
+      <section id="section-description" class="ym-pdp-tabs__section" aria-labelledby="ym-pdp-section-description-title">
+        <h2 id="ym-pdp-section-description-title" class="visually-hidden">Mô tả sản phẩm</h2>
         <div class="ym-pdp-tabs__description" v-html="product.contentHtml"></div>
         <div class="ym-pdp-tabs__expand">
-          <a href="#" @click.prevent>Xem thêm <i class="ri-arrow-down-s-line"></i></a>
+          <button type="button" class="ym-pdp-tabs__expand-btn">Xem thêm <i class="ri-arrow-down-s-line" aria-hidden="true"></i></button>
         </div>
       </section>
 
@@ -237,8 +245,8 @@ function addToCart() {
           </div>
 
           <div class="ym-pdp-tabs__review-write">
-            <button class="ym-pdp-tabs__review-write-btn">
-              <i class="ri-edit-line"></i> Viết đánh giá
+            <button type="button" class="ym-pdp-tabs__review-write-btn">
+              <i class="ri-edit-line" aria-hidden="true"></i> Viết đánh giá
             </button>
           </div>
         </div>
@@ -266,23 +274,26 @@ function addToCart() {
               </div>
               <p class="ym-pdp-tabs__review-content">{{ review.content }}</p>
               <div class="ym-pdp-tabs__review-actions">
-                <button><i class="ri-thumb-up-line"></i> Hữu ích</button>
-                <button><i class="ri-flag-line"></i> Báo cáo</button>
+                <button type="button"><i class="ri-thumb-up-line" aria-hidden="true"></i> Hữu ích</button>
+                <button type="button"><i class="ri-flag-line" aria-hidden="true"></i> Báo cáo</button>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-if="totalReviewPages > 1" class="ym-pdp-tabs__review-pagination">
+        <nav v-if="totalReviewPages > 1" class="ym-pdp-tabs__review-pagination" aria-label="Phân trang đánh giá">
           <button
             v-for="p in totalReviewPages"
             :key="p"
+            type="button"
+            :aria-label="`Trang đánh giá ${p}`"
+            :aria-current="p === reviewPage ? 'page' : undefined"
             :class="['ym-pdp-tabs__review-page-btn', { 'ym-pdp-tabs__review-page-btn--active': p === reviewPage }]"
             @click="reviewPage = p"
           >
             {{ p }}
           </button>
-        </div>
+        </nav>
       </section>
 
       <!-- Hỏi đáp -->
@@ -290,10 +301,16 @@ function addToCart() {
         <h3 class="ym-pdp-tabs__section-title">Hỏi đáp ({{ product.questionCount }})</h3>
 
         <!-- Input area -->
-        <div class="ym-pdp-tabs__qa-input-area">
-          <input type="text" placeholder="Bạn có câu hỏi với sản phẩm này? Đặt câu hỏi ngay." class="ym-pdp-tabs__qa-input">
-          <button class="ym-pdp-tabs__qa-submit-btn">Gửi</button>
-        </div>
+        <form class="ym-pdp-tabs__qa-input-area" @submit.prevent>
+          <label for="ym-pdp-qa-input" class="visually-hidden">Đặt câu hỏi cho sản phẩm</label>
+          <input
+            id="ym-pdp-qa-input"
+            type="text"
+            placeholder="Bạn có câu hỏi với sản phẩm này? Đặt câu hỏi ngay."
+            class="ym-pdp-tabs__qa-input"
+          />
+          <button type="submit" class="ym-pdp-tabs__qa-submit-btn">Gửi</button>
+        </form>
 
         <div v-if="product.questions.length === 0" class="ym-pdp-tabs__qa-empty">
           <p>Chưa có câu hỏi nào. Hãy là người đầu tiên đặt câu hỏi!</p>
@@ -307,10 +324,10 @@ function addToCart() {
               <p class="ym-pdp-tabs__qa-content">{{ q.content }}</p>
               <div class="ym-pdp-tabs__qa-meta">
                 <span class="ym-pdp-tabs__qa-date">{{ q.date }}</span>
-                <button class="ym-pdp-tabs__qa-action-btn" :class="{ 'ym-pdp-tabs__qa-action-btn--liked': q.likes > 0 }">
-                  Thích <i class="ri-thumb-up-fill" v-if="q.likes > 0"></i><i class="ri-thumb-up-line" v-else></i> {{ q.likes }}
+                <button type="button" class="ym-pdp-tabs__qa-action-btn" :class="{ 'ym-pdp-tabs__qa-action-btn--liked': q.likes > 0 }">
+                  Thích <i class="ri-thumb-up-fill" v-if="q.likes > 0" aria-hidden="true"></i><i class="ri-thumb-up-line" v-else aria-hidden="true"></i> {{ q.likes }}
                 </button>
-                <button class="ym-pdp-tabs__qa-action-btn">Trả lời</button>
+                <button type="button" class="ym-pdp-tabs__qa-action-btn">Trả lời</button>
               </div>
             </div>
 
@@ -324,20 +341,20 @@ function addToCart() {
                 <p class="ym-pdp-tabs__qa-content">{{ reply.content }}</p>
                 <div class="ym-pdp-tabs__qa-meta">
                   <span class="ym-pdp-tabs__qa-date">{{ reply.date }}</span>
-                  <button class="ym-pdp-tabs__qa-action-btn" :class="{ 'ym-pdp-tabs__qa-action-btn--liked': reply.likes > 0 }">
-                    Thích <i class="ri-thumb-up-fill" v-if="reply.likes > 0"></i><i class="ri-thumb-up-line" v-else></i> {{ reply.likes }}
+                  <button type="button" class="ym-pdp-tabs__qa-action-btn" :class="{ 'ym-pdp-tabs__qa-action-btn--liked': reply.likes > 0 }">
+                    Thích <i class="ri-thumb-up-fill" v-if="reply.likes > 0" aria-hidden="true"></i><i class="ri-thumb-up-line" v-else aria-hidden="true"></i> {{ reply.likes }}
                   </button>
-                  <button class="ym-pdp-tabs__qa-action-btn">Trả lời</button>
+                  <button type="button" class="ym-pdp-tabs__qa-action-btn">Trả lời</button>
                 </div>
               </div>
               <div v-if="q.replies.length > 2" class="ym-pdp-tabs__qa-reply-more">
-                <a href="#" @click.prevent>Xem 3 câu trả lời <i class="ri-arrow-down-s-line"></i></a>
+                <button type="button" class="ym-pdp-tabs__qa-reply-more-btn">Xem 3 câu trả lời <i class="ri-arrow-down-s-line" aria-hidden="true"></i></button>
               </div>
             </div>
           </div>
 
           <div class="ym-pdp-tabs__qa-more">
-            <a href="#" @click.prevent>Xem thêm <i class="ri-arrow-down-s-line"></i></a>
+            <button type="button" class="ym-pdp-tabs__qa-more-btn">Xem thêm <i class="ri-arrow-down-s-line" aria-hidden="true"></i></button>
           </div>
         </div>
       </section>

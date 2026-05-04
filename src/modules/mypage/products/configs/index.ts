@@ -8,12 +8,8 @@ import dealMatNa from '@/assets/images/products/deal/mat-na-duong-san-chac-da-ba
 import dealCheKhuyetDiem from '@/assets/images/products/deal/che-khuyet-diem-130-medium-6ml-5.jpg'
 import dealMascara from '@/assets/images/products/deal/tải-xuống-2.jpg'
 
-import {
-  hotDealProducts,
-  categorySections,
-  suggestedProducts,
-  type Product as HomeProduct,
-} from '@/modules/mypage/home/configs'
+import { type Product as HomeProduct } from '@/modules/mypage/home/configs'
+import { useAdminDataStore } from '@/modules/admin/stores/adminData'
 
 import type { ProductDetail, RelatedProduct, ProductQuestion } from '../models/Product'
 
@@ -34,13 +30,15 @@ export const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('vi-VN').format(price) + ' đ'
 }
 
-// ── Collect tất cả sản phẩm từ home configs ──
+// ── Collect tất cả sản phẩm từ store (đồng bộ với admin) ──
+// Bao gồm cả 'draft' vì imported SP từ Excel mặc định 'draft' (BE chỉ set 'active'
+// khi cột Trạng thái nhận giá trị hợp lệ). Chỉ ẩn 'out_of_stock'.
 function getAllHomeProducts(): HomeProduct[] {
-  const all: HomeProduct[] = [...hotDealProducts, ...suggestedProducts]
-  for (const section of categorySections) {
-    all.push(...section.products)
-  }
-  return all
+  const store = useAdminDataStore()
+  const byId = new Map<number, any>()
+  for (const product of store.products.filter((p) => p.status !== 'out_of_stock')) byId.set(product.id, product)
+  for (const product of store.publicProducts) byId.set(product.id, product)
+  return [...byId.values()] as unknown as HomeProduct[]
 }
 
 // ── Generate ProductDetail từ HomeProduct ──

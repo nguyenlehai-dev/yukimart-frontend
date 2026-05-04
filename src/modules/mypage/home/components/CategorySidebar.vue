@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { categoryMenuItems } from '../configs'
+import { ref, computed } from 'vue'
 import type { CategoryMenu } from '../configs'
+import { useAdminDataStore } from '@/modules/admin/stores/adminData'
+
+const store = useAdminDataStore()
+// Đồng bộ menu với admin: chỉ hiện danh mục active + showOnMenu
+const categoryMenuItems = computed<CategoryMenu[]>(() => store.customerMenu as any)
 
 const hoveredItem = ref<CategoryMenu | null>(null)
 let hoverTimeout: ReturnType<typeof setTimeout> | null = null
@@ -52,14 +56,17 @@ const onClickItem = (item: CategoryMenu, event: Event) => {
         :class="{ 'ym-category-sidebar__item--active': hoveredItem?.id === item.id }"
         @mouseenter="onMouseEnterItem(item)"
         @mouseleave="onMouseLeaveItem"
+        @focusin="onMouseEnterItem(item)"
       >
         <RouterLink
           :to="item.link"
           class="ym-category-sidebar__link"
+          :aria-haspopup="item.submenu ? 'menu' : undefined"
+          :aria-expanded="item.submenu ? hoveredItem?.id === item.id : undefined"
           @click="item.submenu ? onClickItem(item, $event) : undefined"
         >
           <span class="ym-category-sidebar__name">{{ item.name }}</span>
-          <i v-if="item.submenu" class="ri-arrow-right-s-line ym-category-sidebar__arrow"></i>
+          <i v-if="item.submenu" class="ri-arrow-right-s-line ym-category-sidebar__arrow" aria-hidden="true"></i>
         </RouterLink>
       </li>
     </ul>
@@ -69,8 +76,12 @@ const onClickItem = (item: CategoryMenu, event: Event) => {
       <div
         v-if="hoveredItem?.submenu"
         class="ym-megamenu"
+        role="menu"
+        :aria-label="hoveredItem.name"
         @mouseenter="onMouseEnterDropdown"
         @mouseleave="onMouseLeaveDropdown"
+        @focusin="onMouseEnterDropdown"
+        @focusout="onMouseLeaveDropdown"
       >
         <div class="ym-megamenu__content">
           <div class="ym-megamenu__columns">
@@ -82,13 +93,13 @@ const onClickItem = (item: CategoryMenu, event: Event) => {
               <h4 class="ym-megamenu__col-title">{{ col.title }}</h4>
               <ul class="ym-megamenu__col-list">
                 <li v-for="subItem in col.items" :key="subItem">
-                  <a href="#" class="ym-megamenu__col-link">{{ subItem }}</a>
+                  <a href="#" role="menuitem" class="ym-megamenu__col-link">{{ subItem }}</a>
                 </li>
               </ul>
             </div>
           </div>
           <div v-if="hoveredItem.submenu.image" class="ym-megamenu__image">
-            <img :src="hoveredItem.submenu.image" :alt="hoveredItem.name" />
+            <img :src="hoveredItem.submenu.image" :alt="hoveredItem.name" loading="lazy" decoding="async" />
           </div>
         </div>
       </div>

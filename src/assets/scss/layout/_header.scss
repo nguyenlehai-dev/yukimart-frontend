@@ -1,3 +1,4 @@
+@use 'sass:color';
 @use '../variables' as *;
 
 .ym-header {
@@ -240,7 +241,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, $ym-green, darken($ym-green, 12%));
+  background: linear-gradient(135deg, $ym-green, color.adjust($ym-green, $lightness: -12%));
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -377,4 +378,77 @@
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+// ── Action button reset (giữ nguyên visual của <a> nhưng dùng <button>) ──
+.ym-header__action--btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+
+  &:focus { outline: none; }
+  &:focus-visible {
+    outline: 2px solid $ym-green;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+// Avatar khi là <img> (có nội dung thực, override flex centering)
+.ym-avatar--img {
+  object-fit: cover;
+  background: #fff;
+}
+
+// Mũi tên dropdown user
+.ym-rotate-180 {
+  transform: rotate(180deg);
+  transition: transform 200ms ease-out;
+}
+
+// ── User dropdown menu items khi là <button> ──
+.ym-user-dropdown__item-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #444;
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  i {
+    font-size: 17px;
+    color: #888;
+    width: 20px;
+    text-align: center;
+    transition: color 0.15s;
+  }
+
+  &:hover {
+    background: #f5f9f5;
+    color: $ym-green;
+    i { color: $ym-green; }
+  }
+
+  &:focus { outline: none; }
+  &:focus-visible {
+    background: #f5f9f5;
+    box-shadow: inset 3px 0 0 $ym-green;
+  }
+}
+
+// Lock body scroll khi overlay mở
+body.ym-no-scroll {
+  overflow: hidden;
+  // Giữ chiều rộng để tránh layout shift do scrollbar biến mất
+  padding-right: var(--scrollbar-width, 0);
 }

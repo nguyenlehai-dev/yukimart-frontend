@@ -172,11 +172,12 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   &__badge {
     display: inline-block;
     padding: 4px 12px;
-    background: rgba($ym-orange, 0.1);
-    color: $ym-orange;
+    background: $ym-green-light;
+    color: $ym-green-dark;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
+    border: 1px solid rgba($ym-green, 0.15);
   }
 }
 
@@ -315,8 +316,8 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   background: $ym-acc-card-bg;
   border-radius: $ym-acc-radius;
   box-shadow: $ym-acc-shadow-md;
-  padding: 16px;
-  
+  padding: 24px;
+
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -327,13 +328,17 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     left: 0;
     width: 100%;
     height: 100%;
+    padding: 28px 32px;
   }
 
   @media (max-width: 991px) {
     position: relative;
     height: auto;
     overflow-y: visible;
-    padding: 24px;
+  }
+
+  @media (max-width: 575px) {
+    padding: 16px;
   }
 }
 
@@ -601,6 +606,10 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   &::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 @keyframes fadeIn {
@@ -614,12 +623,13 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .ym-acc-form-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: $ym-text;
   margin-bottom: 16px;
   border-bottom: 1px solid #f1f5f9;
   padding-bottom: 8px;
+  letter-spacing: -0.01em;
 }
 
 .ym-acc-grid--3 {
@@ -876,18 +886,39 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 
 .ym-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: 1px solid $ym-border;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
-  transition: $ym-acc-transition;
+  font-family: inherit;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
   outline: none;
   background: #fff;
   color: $ym-text;
+  min-height: 40px;
+
+  &::placeholder {
+    color: $ym-text-light;
+  }
+
+  &:hover:not(:disabled):not(:focus) {
+    border-color: $ym-text-light;
+  }
 
   &:focus {
     border-color: $ym-green;
     box-shadow: 0 0 0 3px rgba($ym-green, 0.15);
+  }
+
+  &:disabled {
+    background: #f9fafb;
+    color: $ym-text-muted;
+    cursor: not-allowed;
+  }
+
+  &[aria-invalid="true"] {
+    border-color: $ym-red;
+    &:focus { box-shadow: 0 0 0 3px rgba($ym-red, 0.15); }
   }
 }
 
@@ -996,6 +1027,8 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .ym-acc-tab {
+  display: inline-flex;
+  align-items: center;
   padding: 0 0 16px;
   background: none;
   border: none;
@@ -1004,7 +1037,7 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   color: $ym-text-muted;
   position: relative;
   cursor: pointer;
-  transition: $ym-acc-transition;
+  transition: color 200ms ease-out;
   white-space: nowrap;
 
   &::after {
@@ -1023,12 +1056,46 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     color: $ym-text;
   }
 
+  &:focus { outline: none; }
+  &:focus-visible {
+    color: $ym-green;
+    outline: 2px solid $ym-green;
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+
   &--active {
     color: $ym-green;
     &::after {
       width: 100%;
     }
   }
+
+  &__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-left: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: $ym-green-light;
+    color: $ym-green-dark;
+    border-radius: 10px;
+    line-height: 1;
+  }
+
+  &--active &__count {
+    background: $ym-green;
+    color: #fff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ym-acc-tab,
+  .ym-acc-tab::after { transition: none; }
 }
 
 .ym-acc-order-list {
@@ -1417,31 +1484,43 @@ $ym-acc-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 // ── Empty States ──
 .ym-acc-empty {
   text-align: center;
-  padding: 60px 20px;
+  padding: 56px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
   &__icon {
-    width: 80px;
-    height: 80px;
-    background: #f1f5f9;
-    color: #94a3b8;
+    width: 72px;
+    height: 72px;
+    background: $ym-green-light;
+    color: $ym-green;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36px;
-    margin: 0 auto 20px;
+    font-size: 32px;
+    margin: 0 auto 16px;
 
-    &--blue { background: #e0f2fe; color: #38bdf8; }
+    &--blue { background: #e0f2fe; color: #0284c7; }
+    &--orange { background: #fef3c7; color: #d97706; }
   }
 
   &__title {
     font-size: 18px;
-    font-weight: 600;
-    margin: 0 0 8px;
+    font-weight: 700;
+    color: $ym-text;
+    margin: 0 0 6px;
   }
 
   &__desc {
     font-size: 14px;
     color: $ym-text-muted;
+    margin: 0 0 16px;
+    max-width: 360px;
+    line-height: 1.5;
+  }
+
+  .ym-btn {
+    margin-top: 4px;
   }
 }

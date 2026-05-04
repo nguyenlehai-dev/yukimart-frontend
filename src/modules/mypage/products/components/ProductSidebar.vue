@@ -18,39 +18,39 @@ const props = defineProps<{
       </h3>
       <ul class="ym-pdp-sidebar__policy-list">
         <li>
-          <i class="ri-time-fill ym-pdp-sidebar__policy-icon ym-pdp-sidebar__policy-icon--green"></i>
+          <i class="ri-time-fill ym-pdp-sidebar__policy-icon ym-pdp-sidebar__policy-icon--green" aria-hidden="true"></i>
           <div>
             <strong>Giao Nhanh Miễn Phí 2H.</strong>
             <span>Trẻ tặng 100K</span>
           </div>
         </li>
         <li>
-          <i class="ri-shield-check-fill ym-pdp-sidebar__policy-icon ym-pdp-sidebar__policy-icon--green"></i>
+          <i class="ri-shield-check-fill ym-pdp-sidebar__policy-icon ym-pdp-sidebar__policy-icon--green" aria-hidden="true"></i>
           <div>
-            <strong>Hasaki đền bù 100%</strong> hàng đền bù 100% nếu phát hiện hàng giả
+            <strong>YukiMart đền bù 100%</strong> nếu phát hiện hàng giả
           </div>
         </li>
         <li>
-          <i class="ri-truck-line ym-pdp-sidebar__policy-icon ym-pdp-sidebar__policy-icon--blue"></i>
+          <i class="ri-truck-line ym-pdp-sidebar__policy-icon ym-pdp-sidebar__policy-icon--blue" aria-hidden="true"></i>
           <div>
-            <strong>Giao Hàng Miễn Phí</strong> (từ 90K tại 60 Tỉnh Thành trừ huyện, toàn Quốc từ 249K)
+            <strong>Giao Hàng Miễn Phí</strong> (từ 90K tại 60 Tỉnh Thành, toàn Quốc từ 249K)
           </div>
         </li>
         <li>
-          <i class="ri-arrow-go-back-fill ym-pdp-sidebar__policy-icon ym-pdp-sidebar__policy-icon--orange"></i>
+          <i class="ri-arrow-go-back-fill ym-pdp-sidebar__policy-icon ym-pdp-sidebar__policy-icon--orange" aria-hidden="true"></i>
           <div>
             <strong>Đổi trả</strong> trong <strong>30 ngày</strong>
           </div>
         </li>
       </ul>
-      <a href="#" class="ym-pdp-sidebar__policy-more">Xem thêm</a>
+      <button type="button" class="ym-pdp-sidebar__policy-more">Xem thêm</button>
     </div>
 
     <!-- Brand box -->
     <div class="ym-pdp-sidebar__box ym-pdp-sidebar__brand-box">
       <div class="ym-pdp-sidebar__brand-header">
         <div class="ym-pdp-sidebar__brand-logo">{{ product.brand }}</div>
-        <button class="ym-pdp-sidebar__brand-follow">Theo dõi +</button>
+        <button type="button" class="ym-pdp-sidebar__brand-follow" :aria-label="`Theo dõi thương hiệu ${product.brand}`">Theo dõi +</button>
       </div>
     </div>
 
@@ -65,8 +65,8 @@ const props = defineProps<{
           class="ym-pdp-sidebar__product-item"
         >
           <div class="ym-pdp-sidebar__product-img-wrap">
-            <img :src="p.image" :alt="p.name" class="ym-pdp-sidebar__product-img" />
-            <span v-if="p.discount" class="ym-pdp-sidebar__product-badge">-{{ p.discount }}%</span>
+            <img :src="p.image" :alt="p.name || ''" loading="lazy" decoding="async" class="ym-pdp-sidebar__product-img" />
+            <span v-if="p.discount" class="ym-pdp-sidebar__product-badge" :aria-label="`Giảm ${p.discount}%`">-{{ p.discount }}%</span>
           </div>
           <div class="ym-pdp-sidebar__product-info">
             <span class="ym-pdp-sidebar__product-price">{{ formatPrice(p.salePrice) }}</span>
@@ -89,8 +89,8 @@ const props = defineProps<{
           class="ym-pdp-sidebar__product-item"
         >
           <div class="ym-pdp-sidebar__product-img-wrap">
-            <img :src="p.image" :alt="p.name" class="ym-pdp-sidebar__product-img" />
-            <span v-if="p.discount" class="ym-pdp-sidebar__product-badge">-{{ p.discount }}%</span>
+            <img :src="p.image" :alt="p.name || ''" loading="lazy" decoding="async" class="ym-pdp-sidebar__product-img" />
+            <span v-if="p.discount" class="ym-pdp-sidebar__product-badge" :aria-label="`Giảm ${p.discount}%`">-{{ p.discount }}%</span>
           </div>
           <div class="ym-pdp-sidebar__product-info">
             <span class="ym-pdp-sidebar__product-price">{{ formatPrice(p.salePrice) }}</span>

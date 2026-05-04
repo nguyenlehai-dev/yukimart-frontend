@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 /*
  * Dynamic Route Loader
@@ -29,6 +30,22 @@ for (const path in moduleRouteFiles) {
 const router = createRouter({
   history: createWebHistory(),
   routes: moduleRoutes,
+})
+
+// Guard: chỉ Super Admin mới vào được /admin/*. Các user khác bị đẩy về trang chủ.
+router.beforeEach(async (to) => {
+  const requiresAdmin = to.path === '/admin' || to.path.startsWith('/admin/')
+  if (!requiresAdmin) return true
+
+  const authStore = useAuthStore()
+  if (!authStore.initialized) {
+    await authStore.hydrate()
+  }
+
+  if (!authStore.isLoggedIn || !authStore.isSuperAdmin) {
+    return { path: '/', replace: true }
+  }
+  return true
 })
 
 export default router

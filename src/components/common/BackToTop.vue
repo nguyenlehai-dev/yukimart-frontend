@@ -3,19 +3,20 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 const show = ref(false)
 
-const checkScroll = () => {
+function checkScroll() {
   show.value = window.scrollY > 400
 }
 
-const scrollToTop = () => {
+function scrollToTop() {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   window.scrollTo({
     top: 0,
-    behavior: 'smooth'
+    behavior: reduce ? 'auto' : 'smooth',
   })
 }
 
 onMounted(() => {
-  window.addEventListener('scroll', checkScroll)
+  window.addEventListener('scroll', checkScroll, { passive: true })
 })
 
 onUnmounted(() => {
@@ -25,13 +26,14 @@ onUnmounted(() => {
 
 <template>
   <Transition name="fade">
-    <button 
-      v-show="show" 
-      class="ym-back-to-top" 
+    <button
+      v-show="show"
+      type="button"
+      class="ym-back-to-top"
+      aria-label="Lên đầu trang"
       @click="scrollToTop"
-      aria-label="Back to top"
     >
-      <i class="ri-arrow-up-line"></i>
+      <i class="ri-arrow-up-line" aria-hidden="true"></i>
     </button>
   </Transition>
 </template>

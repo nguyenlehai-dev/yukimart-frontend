@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi } from '../services/api'
+import { authApi, getAuthToken, setAuthToken, setOrganizationId } from '../services/api'
 import { getErrorMessage } from '../helpers/apiHelper'
 
 export interface User {
@@ -8,6 +8,8 @@ export interface User {
   name: string
   email: string
   role?: string // 'retail' | 'wholesale' | 'admin'
+  roles?: string[] // tên các role Spatie gán cho user (vd: ['Super Admin', 'Admin'])
+  is_super_admin?: boolean // true khi user có role 'Super Admin'
   avatar?: string // user avatar image
 }
 
@@ -23,22 +25,36 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = computed(() => user.value?.name || '')
   const userRole = computed(() => user.value?.role || 'retail')
   const isWholesale = computed(() => user.value?.role === 'wholesale')
+  // Super Admin = quyền truy cập trang /admin (UserResource trả về cờ này từ BE)
+  const isSuperAdmin = computed(() => !!user.value?.is_super_admin)
 
-  // ── Khởi tạo: gọi /me để kiểm tra đã đăng nhập chưa ──
-  // Cookie httpOnly do BE quản lý, FE chỉ gọi /me để lấy user
-  async function hydrate() {
-    if (initialized.value) return
-    try {
-      const res = await authApi.me()
-      if (res.data.success && res.data.data?.user) {
-        user.value = res.data.data.user
+  // ── Khởi tạo: gọi /me nếu có token trong localStorage ──
+  // Share in-flight promise để router guard / nhiều caller cùng đợi 1 request /me,
+  // tránh race khi F5 trên /admin (guard chạy trước khi /me kịp resolve).
+  let hydratePromise: Promise<void> | null = null
+  function hydrate(): Promise<void> {
+    if (initialized.value) return Promise.resolve()
+    if (hydratePromise) return hydratePromise
+    hydratePromise = (async () => {
+      if (!getAuthToken()) {
+        initialized.value = true
+        return
       }
-    } catch {
-      // 401 = chưa đăng nhập, không cần xử lý gì
-      user.value = null
-    } finally {
-      initialized.value = true
-    }
+      try {
+        const res = await authApi.me()
+        if (res.data.success && res.data.data?.user) {
+          user.value = res.data.data.user
+        } else {
+          setAuthToken(null)
+        }
+      } catch {
+        // 401 = token hết hạn → xoá token (interceptor đã làm)
+        user.value = null
+      } finally {
+        initialized.value = true
+      }
+    })()
+    return hydratePromise
   }
 
   // update avatar via API
@@ -67,17 +83,18 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = ''
     try {
-      if (email === 'admin@yukimart.vn') {
-        user.value = { id: 1, name: 'Admin User', email: 'admin@yukimart.vn', role: 'admin' }
-        return true
-      }
       const res = await authApi.login({ email, password, recaptcha_token: recaptchaToken })
-      if (res.data.success) {
-        // BE đã set cookie httpOnly, chỉ cần lưu user info
-        user.value = res.data.data?.user
+      if (res.data.success && res.data.data?.access_token) {
+        setAuthToken(res.data.data.access_token)
+        // Lưu organization id (BE yêu cầu header X-Organization-Id cho mọi request)
+        const orgId = res.data.data.current_organization_id
+          ?? res.data.data.available_organizations?.[0]?.id
+          ?? null
+        setOrganizationId(orgId)
+        user.value = res.data.data.user
         return true
       }
-      error.value = 'Đăng nhập thất bại'
+      error.value = res.data.message || 'Đăng nhập thất bại'
       return false
     } catch (err: any) {
       if (err.response?.status === 401) {
@@ -104,7 +121,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authApi.register(data)
       if (res.data.success) {
-        // BE đã set cookie httpOnly + trả user info
+        if (res.data.data?.access_token) {
+          setAuthToken(res.data.data.access_token)
+        }
         if (res.data.data?.user) {
           user.value = res.data.data.user
         }
@@ -135,10 +154,11 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     try {
       await authApi.logout()
-      // BE đã xóa cookie httpOnly
     } catch {
-      // Bỏ qua lỗi API khi logout
+      // Bỏ qua lỗi API khi logout — vẫn xoá local state
     } finally {
+      setAuthToken(null)
+      setOrganizationId(null)
       user.value = null
     }
   }
@@ -157,6 +177,7 @@ export const useAuthStore = defineStore('auth', () => {
     userName,
     userRole,
     isWholesale,
+    isSuperAdmin,
     // Actions
     login,
     register,

@@ -16,16 +16,16 @@ const formatPrice = (price: number) =>
       </div>
 
       <div v-else class="ym-order-confirm__layout">
-        <h2 class="ym-order-confirm__heading">Chi tiết đơn hàng</h2>
+        <h1 class="ym-order-confirm__heading">Chi tiết đơn hàng</h1>
 
         <div class="ym-order-confirm__grid">
           <!-- Left: Order details -->
           <div class="ym-order-confirm__details">
-            <table class="ym-order-confirm__table">
+            <table class="ym-order-confirm__table" aria-label="Chi tiết đơn hàng">
               <thead>
                 <tr>
-                  <th>SẢN PHẨM</th>
-                  <th>TỔNG</th>
+                  <th scope="col">SẢN PHẨM</th>
+                  <th scope="col">TỔNG</th>
                 </tr>
               </thead>
               <tbody>
@@ -36,15 +36,15 @@ const formatPrice = (price: number) =>
               </tbody>
               <tfoot>
                 <tr>
-                  <td>Tổng số phụ:</td>
+                  <th scope="row">Tổng số phụ</th>
                   <td>{{ formatPrice(order.subtotal) }}</td>
                 </tr>
                 <tr>
-                  <td>Phương thức thanh toán:</td>
+                  <th scope="row">Phương thức thanh toán</th>
                   <td>{{ order.paymentMethod }}</td>
                 </tr>
                 <tr class="ym-order-confirm__total-row">
-                  <td>Tổng cộng:</td>
+                  <th scope="row">Tổng cộng</th>
                   <td class="ym-order-confirm__total-value">{{ formatPrice(order.total) }}</td>
                 </tr>
               </tfoot>
@@ -52,10 +52,10 @@ const formatPrice = (price: number) =>
           </div>
 
           <!-- Right: Thank you message -->
-          <div class="ym-order-confirm__thankyou">
-            <div class="ym-order-confirm__thankyou-box">
+          <aside class="ym-order-confirm__thankyou">
+            <div class="ym-order-confirm__thankyou-box" role="status" aria-live="polite">
               <p class="ym-order-confirm__thankyou-msg">
-                <i class="ri-checkbox-circle-fill"></i>
+                <i class="ri-checkbox-circle-fill" aria-hidden="true"></i>
                 Cảm ơn bạn. Đơn hàng của bạn đã được nhận.
               </p>
               <ul class="ym-order-confirm__info-list">
@@ -65,7 +65,7 @@ const formatPrice = (price: number) =>
                 <li>Phương thức thanh toán: <strong>{{ order.paymentMethod }}</strong></li>
               </ul>
             </div>
-          </div>
+          </aside>
         </div>
       </div>
     </div>

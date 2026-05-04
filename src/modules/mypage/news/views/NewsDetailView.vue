@@ -1,13 +1,46 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { newsArticles, newsCategories } from '../configs'
+import api from '@/services/api'
+import { newsArticles as fallbackArticles, newsCategories as fallbackCategories, type NewsArticle, type NewsCategory } from '../configs'
 
 const route = useRoute()
 
-const article = computed(() => {
-  return newsArticles.find(a => a.slug === route.params.slug) || newsArticles[0]
-})
+const newsArticles = ref<NewsArticle[]>(fallbackArticles)
+const newsCategories = ref<NewsCategory[]>(fallbackCategories)
+const currentArticle = ref<NewsArticle>(fallbackArticles.find(a => a.slug === route.params.slug) || fallbackArticles[0])
+
+const article = computed(() => currentArticle.value)
+
+async function loadSidebar() {
+  try {
+    const res = await api.get('/shop/news/public')
+    const data = res.data.data || []
+    if (data.length) {
+      newsArticles.value = data.map((item: NewsArticle, idx: number) => ({
+        ...item,
+        image: item.image || fallbackArticles[idx % fallbackArticles.length]?.image || '',
+      }))
+      newsCategories.value = res.data.categories?.length ? res.data.categories : fallbackCategories
+    }
+  } catch {
+    newsArticles.value = fallbackArticles
+    newsCategories.value = fallbackCategories
+  }
+}
+
+async function loadArticle(slug: string) {
+  try {
+    const res = await api.get(`/shop/news/slug/${encodeURIComponent(slug)}`)
+    const fallback = fallbackArticles.find(a => a.slug === slug) || fallbackArticles[0]
+    currentArticle.value = { ...res.data.data, image: res.data.data.image || fallback.image }
+  } catch {
+    currentArticle.value = fallbackArticles.find(a => a.slug === slug) || fallbackArticles[0]
+  }
+}
+
+onMounted(loadSidebar)
+watch(() => route.params.slug, (slug) => loadArticle(String(slug || '')), { immediate: true })
 </script>
 
 <template>
@@ -28,41 +61,41 @@ const article = computed(() => {
             <div class="ym-news__detail-content" v-html="article.content"></div>
 
             <!-- Social share -->
-            <div class="ym-news__detail-share">
-              <a href="#"><i class="ri-facebook-fill"></i></a>
-              <a href="#"><i class="ri-twitter-x-fill"></i></a>
-              <a href="#"><i class="ri-mail-line"></i></a>
-              <a href="#"><i class="ri-pinterest-fill"></i></a>
-              <a href="#"><i class="ri-share-box-line"></i></a>
+            <div class="ym-news__detail-share" role="group" aria-label="Chia sẻ bài viết">
+              <a href="#" aria-label="Chia sẻ qua Facebook" rel="noopener"><i class="ri-facebook-fill" aria-hidden="true"></i></a>
+              <a href="#" aria-label="Chia sẻ qua X (Twitter)" rel="noopener"><i class="ri-twitter-x-fill" aria-hidden="true"></i></a>
+              <a href="#" aria-label="Chia sẻ qua email"><i class="ri-mail-line" aria-hidden="true"></i></a>
+              <a href="#" aria-label="Chia sẻ qua Pinterest" rel="noopener"><i class="ri-pinterest-fill" aria-hidden="true"></i></a>
+              <a href="#" aria-label="Chia sẻ qua liên kết"><i class="ri-share-box-line" aria-hidden="true"></i></a>
             </div>
           </article>
 
           <!-- Comment form -->
-          <div class="ym-news__comment-form">
+          <form class="ym-news__comment-form" @submit.prevent>
             <h3>Trả lời</h3>
             <p class="ym-news__comment-note">
-              Email của bạn sẽ không được hiển thị công khai. Các trường bắt buộc được đánh dấu *
+              Email của bạn sẽ không được hiển thị công khai. Các trường bắt buộc được đánh dấu <span aria-hidden="true">*</span>
             </p>
             <div class="ym-news__comment-field">
-              <label>Bình luận</label>
-              <textarea rows="6" placeholder="Viết bình luận của bạn..."></textarea>
+              <label for="news-comment">Bình luận</label>
+              <textarea id="news-comment" rows="6" placeholder="Viết bình luận của bạn..."></textarea>
             </div>
             <div class="ym-news__comment-row">
               <div class="ym-news__comment-field">
-                <label>Tên *</label>
-                <input type="text" />
+                <label for="news-comment-name">Tên <span aria-hidden="true">*</span></label>
+                <input id="news-comment-name" type="text" autocomplete="name" required />
               </div>
               <div class="ym-news__comment-field">
-                <label>Email *</label>
-                <input type="email" />
+                <label for="news-comment-email">Email <span aria-hidden="true">*</span></label>
+                <input id="news-comment-email" type="email" autocomplete="email" inputmode="email" required />
               </div>
               <div class="ym-news__comment-field">
-                <label>Trang web</label>
-                <input type="url" />
+                <label for="news-comment-url">Trang web</label>
+                <input id="news-comment-url" type="url" autocomplete="url" inputmode="url" />
               </div>
             </div>
-            <button class="ym-news__comment-submit">PHẢN HỒI</button>
-          </div>
+            <button type="submit" class="ym-news__comment-submit">PHẢN HỒI</button>
+          </form>
         </div>
 
         <!-- Sidebar -->

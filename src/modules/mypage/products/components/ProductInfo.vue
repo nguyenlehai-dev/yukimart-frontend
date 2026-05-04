@@ -104,15 +104,15 @@ function buyNow() {
 
     <!-- Rating -->
     <div class="ym-pdp-info__rating-row">
-      <span class="ym-pdp-info__rating-score">{{ product.rating }}</span>
-      <span class="ym-pdp-info__stars">
+      <span class="ym-pdp-info__rating-score" :aria-label="`Đánh giá ${product.rating} trên 5 sao`">{{ product.rating }}</span>
+      <span class="ym-pdp-info__stars" aria-hidden="true">
         <i v-for="n in fullStars" :key="n" class="ri-star-fill"></i>
         <i v-if="hasHalfStar" class="ri-star-half-fill"></i>
       </span>
       <a href="#reviews" class="ym-pdp-info__rating-link">{{ product.ratingCount }} đánh giá</a>
-      <span class="ym-pdp-info__divider">|</span>
+      <span class="ym-pdp-info__divider" aria-hidden="true">|</span>
       <a href="#qa" class="ym-pdp-info__rating-link">{{ product.questionCount }} Hỏi đáp</a>
-      <span class="ym-pdp-info__divider">|</span>
+      <span class="ym-pdp-info__divider" aria-hidden="true">|</span>
       <span class="ym-pdp-info__sku">Mã sản phẩm: {{ product.sku }}</span>
     </div>
 
@@ -144,27 +144,34 @@ function buyNow() {
     </div>
 
     <!-- Skin type -->
-    <div class="ym-pdp-info__option-row">
+    <div class="ym-pdp-info__option-row" role="radiogroup" aria-label="Loại da">
       <span class="ym-pdp-info__option-label">Loại da: <strong>{{ selectedSkinType }}</strong></span>
       <div class="ym-pdp-info__option-list">
         <button
           v-for="opt in product.skinTypeOptions"
           :key="opt.label"
+          type="button"
+          role="radio"
+          :aria-checked="opt.label === selectedSkinType"
+          :aria-label="opt.label"
           :class="['ym-pdp-info__option-btn', { 'ym-pdp-info__option-btn--active': opt.label === selectedSkinType }]"
           @click="selectedSkinType = opt.label"
         >
-          <img v-if="opt.image" :src="opt.image" :alt="opt.label" class="ym-pdp-info__option-img" />
+          <img v-if="opt.image" :src="opt.image" :alt="opt.label" loading="lazy" decoding="async" class="ym-pdp-info__option-img" />
         </button>
       </div>
     </div>
 
     <!-- Volume -->
-    <div class="ym-pdp-info__option-row">
+    <div class="ym-pdp-info__option-row" role="radiogroup" aria-label="Dung tích">
       <span class="ym-pdp-info__option-label">Dung Tích: <strong>{{ selectedVolume }}</strong></span>
       <div class="ym-pdp-info__option-list">
         <button
           v-for="vol in product.volumes"
           :key="vol"
+          type="button"
+          role="radio"
+          :aria-checked="vol === selectedVolume"
           :class="['ym-pdp-info__volume-btn', { 'ym-pdp-info__volume-btn--active': vol === selectedVolume }]"
           @click="selectedVolume = vol"
         >
@@ -175,11 +182,32 @@ function buyNow() {
 
     <!-- Quantity -->
     <div class="ym-pdp-info__qty-row">
-      <span class="ym-pdp-info__option-label">Số lượng:</span>
-      <div class="ym-pdp-info__qty-control">
-        <button class="ym-pdp-info__qty-btn" @click="decrementQty">—</button>
-        <input v-model.number="quantity" type="number" min="1" :max="product.stock" class="ym-pdp-info__qty-input" />
-        <button class="ym-pdp-info__qty-btn" @click="incrementQty">+</button>
+      <label for="ym-pdp-qty" class="ym-pdp-info__option-label">Số lượng:</label>
+      <div class="ym-pdp-info__qty-control" role="group" aria-label="Số lượng">
+        <button
+          type="button"
+          class="ym-pdp-info__qty-btn"
+          aria-label="Giảm số lượng"
+          :disabled="quantity <= 1"
+          @click="decrementQty"
+        >−</button>
+        <input
+          id="ym-pdp-qty"
+          v-model.number="quantity"
+          type="number"
+          min="1"
+          :max="product.stock"
+          inputmode="numeric"
+          class="ym-pdp-info__qty-input"
+          aria-label="Số lượng"
+        />
+        <button
+          type="button"
+          class="ym-pdp-info__qty-btn"
+          aria-label="Tăng số lượng"
+          :disabled="quantity >= product.stock"
+          @click="incrementQty"
+        >+</button>
       </div>
     </div>
 
@@ -197,23 +225,23 @@ function buyNow() {
 
     <!-- Share + Wishlist -->
     <div class="ym-pdp-info__share-row">
-      <button class="ym-pdp-info__share-btn">
-        <i class="ri-facebook-fill"></i> Chia sẻ
+      <button type="button" class="ym-pdp-info__share-btn" aria-label="Chia sẻ qua Facebook">
+        <i class="ri-facebook-fill" aria-hidden="true"></i> Chia sẻ
       </button>
-      <button class="ym-pdp-info__wishlist-btn">
-        <i class="ri-heart-line"></i> Thêm vào danh sách yêu thích
+      <button type="button" class="ym-pdp-info__wishlist-btn">
+        <i class="ri-heart-line" aria-hidden="true"></i> Thêm vào danh sách yêu thích
       </button>
     </div>
 
     <!-- Action buttons -->
     <div class="ym-pdp-info__actions">
-      <div class="ym-pdp-info__stock-info">
-        <i class="ri-checkbox-circle-fill"></i> {{ product.stock }}/306 CN Còn hàng
+      <div class="ym-pdp-info__stock-info" role="status">
+        <i class="ri-checkbox-circle-fill" aria-hidden="true"></i> {{ product.stock }}/306 CN Còn hàng
       </div>
-      <button class="ym-pdp-info__btn-cart" @click="addToCart">
-        <i class="ri-shopping-cart-fill"></i> GIỎ HÀNG
+      <button type="button" class="ym-pdp-info__btn-cart" @click="addToCart" :aria-label="`Thêm ${product.name} vào giỏ hàng`">
+        <i class="ri-shopping-cart-fill" aria-hidden="true"></i> GIỎ HÀNG
       </button>
-      <button class="ym-pdp-info__btn-buy" @click="buyNow">
+      <button type="button" class="ym-pdp-info__btn-buy" @click="buyNow" :aria-label="`Mua ngay ${product.name}`">
         MUA NGAY NOWFREE 2H<br/><small>Trẻ tặng 100k</small>
       </button>
     </div>

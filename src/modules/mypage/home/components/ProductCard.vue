@@ -11,10 +11,16 @@ const { displayPrice, crossedOutPrice, roleBadge } = useProductPricing(props.pro
 </script>
 
 <template>
-  <RouterLink :to="`/products/${product.id}`" class="ym-product-card">
+  <RouterLink :to="`/products/${product.id}`" class="ym-product-card" :aria-label="product.name">
     <div class="ym-product-card__image-wrapper">
-      <img :src="product.image" :alt="product.name" class="ym-product-card__image" />
-      <span v-if="product.discount" class="ym-product-card__badge">-{{ product.discount }}%</span>
+      <img
+        :src="product.image"
+        :alt="product.name || ''"
+        loading="lazy"
+        decoding="async"
+        class="ym-product-card__image"
+      />
+      <span v-if="product.discount" class="ym-product-card__badge" :aria-label="`Giảm ${product.discount}%`">-{{ product.discount }}%</span>
       <span v-if="roleBadge" class="ym-product-card__role-badge" :class="roleBadge.class">
         {{ roleBadge.text }}
       </span>
@@ -27,15 +33,17 @@ const { displayPrice, crossedOutPrice, roleBadge } = useProductPricing(props.pro
           v-if="getBrandLogo(product.brand)"
           :src="getBrandLogo(product.brand)"
           :alt="product.brand"
+          loading="lazy"
+          decoding="async"
           class="ym-product-card__brand-logo"
         />
         <span v-else>{{ product.brand }}</span>
       </div>
       <div class="ym-product-card__pricing">
-        <span v-if="crossedOutPrice > 0" class="ym-product-card__price-old">
+        <span v-if="crossedOutPrice > 0" class="ym-product-card__price-old" :aria-label="`Giá gốc ${formatPrice(crossedOutPrice)}`">
           {{ formatPrice(crossedOutPrice) }}
         </span>
-        <span class="ym-product-card__price-sale">{{ formatPrice(displayPrice) }}</span>
+        <span class="ym-product-card__price-sale" :aria-label="`Giá hiện tại ${formatPrice(displayPrice)}`">{{ formatPrice(displayPrice) }}</span>
       </div>
     </div>
   </RouterLink>

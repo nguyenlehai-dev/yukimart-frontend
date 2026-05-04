@@ -3,11 +3,11 @@ import HeroBanner from '../components/HeroBanner.vue'
 import CategorySidebar from '../components/CategorySidebar.vue'
 import SideBanners from '../components/SideBanners.vue'
 import PolicyBadges from '../components/PolicyBadges.vue'
-import HotDeals from '../components/HotDeals.vue'
 import FeaturedBrands from '../components/FeaturedBrands.vue'
 import CategorySection from '../components/CategorySection.vue'
-import SuggestedProducts from '../components/SuggestedProducts.vue'
-import { categorySections } from '../configs'
+import { useAdminDataStore } from '@/modules/admin/stores/adminData'
+
+const store = useAdminDataStore()
 </script>
 
 <template>
@@ -22,20 +22,14 @@ import { categorySections } from '../configs'
       </div>
     </section>
 
-    <!-- Hot Deals -->
-    <HotDeals />
-
     <!-- Featured Brands -->
     <FeaturedBrands />
 
     <!-- Category Sections -->
     <CategorySection
-      v-for="section in categorySections"
+      v-for="section in store.shopSections"
       :key="section.id"
       :section="section"
     />
-
-    <!-- Gợi ý dành riêng cho bạn -->
-    <SuggestedProducts />
   </div>
 </template>

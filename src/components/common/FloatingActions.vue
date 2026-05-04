@@ -78,19 +78,25 @@ onUnmounted(() => {
       :class="{ 'ym-floating-logo--hidden': isHidden }"
       :style="clampedTop !== null ? { top: clampedTop + 'px', transform: 'none' } : {}"
     >
-      <img :src="logoImg" alt="YukiMart" />
+      <img :src="logoImg" alt="" aria-hidden="true" />
     </div>
 
     <!-- Nút liên hệ bên phải -->
     <div class="ym-floating-actions">
-      <a href="https://www.facebook.com/yukimartofficial" target="_blank" class="ym-floating-actions__btn ym-floating-actions__btn--fb" aria-label="Facebook">
-        <i class="ri-facebook-fill"></i>
+      <a
+        href="https://www.facebook.com/yukimartofficial"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="ym-floating-actions__btn ym-floating-actions__btn--fb"
+        aria-label="Mở Facebook YukiMart trong tab mới"
+      >
+        <i class="ri-facebook-fill" aria-hidden="true"></i>
       </a>
-      <a href="mailto:yukimart524@gmail.com" class="ym-floating-actions__btn ym-floating-actions__btn--mail" aria-label="Gửi email">
-        <i class="ri-mail-fill"></i>
+      <a href="mailto:yukimart524@gmail.com" class="ym-floating-actions__btn ym-floating-actions__btn--mail" aria-label="Gửi email cho YukiMart">
+        <i class="ri-mail-fill" aria-hidden="true"></i>
       </a>
-      <a href="tel:0933738798" class="ym-floating-actions__btn ym-floating-actions__btn--phone" aria-label="Gọi điện">
-        <i class="ri-phone-fill"></i>
+      <a href="tel:0933738798" class="ym-floating-actions__btn ym-floating-actions__btn--phone" aria-label="Gọi hotline YukiMart">
+        <i class="ri-phone-fill" aria-hidden="true"></i>
       </a>
     </div>
   </div>

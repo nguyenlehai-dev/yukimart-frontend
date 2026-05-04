@@ -1,37 +1,29 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import {
-  categoryMenuItems,
-  hotDealProducts,
-  categorySections,
-  suggestedProducts,
-  formatPrice,
-  type Product,
-} from '@/modules/mypage/home/configs'
+import { formatPrice, type Product } from '@/modules/mypage/home/configs'
+import { useAdminDataStore } from '@/modules/admin/stores/adminData'
 
 const route = useRoute()
+const store = useAdminDataStore()
 
-// ── Collect ALL products from every source ──
-const allProducts = computed<Product[]>(() => {
-  const map = new Map<number, Product>()
-  const addAll = (list: Product[]) => list.forEach(p => map.set(p.id, p))
-  addAll(hotDealProducts)
-  categorySections.forEach(s => addAll(s.products))
-  addAll(suggestedProducts)
-  return Array.from(map.values())
-})
+// Đồng bộ menu categories với admin (active + showOnMenu)
+const categoryMenuItems = computed(() => store.customerMenu)
 
-// ── Sidebar categories from menu ──
+// Trang danh sách dùng API phân trang để không kéo toàn bộ sản phẩm về trình duyệt.
+const allProducts = computed<Product[]>(() =>
+  store.publicProducts as unknown as Product[]
+)
+
+// ── Sidebar categories from menu (đồng bộ admin) ──
 const sidebarCategories = computed(() =>
-  categoryMenuItems.map(c => ({ id: c.id, name: c.name, link: c.link }))
+  categoryMenuItems.value.map(c => ({ id: c.id, name: c.name, link: c.link }))
 )
 
 // ── Unique brands from all products ──
 const allBrands = computed(() => {
-  const brandSet = new Set<string>()
-  allProducts.value.forEach(p => brandSet.add(p.brand))
-  return Array.from(brandSet).sort()
+  if (store.publicBrandFacets.length) return store.publicBrandFacets.map((item) => item.brand)
+  return Array.from(new Set(allProducts.value.map((p) => p.brand))).sort()
 })
 
 // ── Filter state ──
@@ -48,72 +40,22 @@ const pageTitle = computed(() => {
   const q = route.query
   if (q.deal === 'hot') return 'Deal Hấp Dẫn'
   if (q.cat) {
-    const cat = categoryMenuItems.find(c => c.link.includes(q.cat as string))
+    const cat = categoryMenuItems.value.find(c => c.link.includes(q.cat as string))
     return cat ? cat.name : 'Sản Phẩm'
   }
+  if (q.brand) return `Thương hiệu ${q.brand}`
+  if ('brands' in q) return 'Thương Hiệu'
   if ('bestseller' in q) return 'Sản Phẩm Bán Chạy'
   if ('new' in q) return 'Hàng Mới Về'
   if ('clinic' in q) return 'Clinic & Spa'
   return 'Tất Cả Sản Phẩm'
 })
 
-// ── Filtered & sorted products (all) ──
-const allFilteredSorted = computed(() => {
-  let list = [...allProducts.value]
-
-  // Category filter
-  if (selectedCategory.value) {
-    const cat = categoryMenuItems.find(c => c.link.includes(selectedCategory.value))
-    if (cat) {
-      const section = categorySections.find(s => s.title.toLowerCase().includes(cat.name.toLowerCase().split(' ')[0]))
-      if (section) {
-        const ids = new Set(section.products.map(p => p.id))
-        list = list.filter(p => ids.has(p.id) || p.category.toLowerCase().includes(cat.name.toLowerCase().split(' ')[0]))
-      }
-    }
-  }
-
-  // Brand filter
-  if (selectedBrands.value.length > 0) {
-    list = list.filter(p => selectedBrands.value.includes(p.brand))
-  }
-
-  // Price filter
-  if (priceFrom.value !== null) {
-    list = list.filter(p => p.salePrice >= priceFrom.value!)
-  }
-  if (priceTo.value !== null) {
-    list = list.filter(p => p.salePrice <= priceTo.value!)
-  }
-
-  // Sort
-  switch (sortBy.value) {
-    case 'bestseller':
-      list.sort((a, b) => b.stock - a.stock)
-      break
-    case 'price-asc':
-      list.sort((a, b) => a.salePrice - b.salePrice)
-      break
-    case 'price-desc':
-      list.sort((a, b) => b.salePrice - a.salePrice)
-      break
-    default: // newest - by id desc
-      list.sort((a, b) => b.id - a.id)
-  }
-
-  return list
-})
-
 // ── Pagination ──
-const totalFiltered = computed(() => allFilteredSorted.value.length)
-const totalPages = computed(() => Math.ceil(totalFiltered.value / perPage))
-
-const filteredProducts = computed(() => {
-  const start = (currentPage.value - 1) * perPage
-  return allFilteredSorted.value.slice(start, start + perPage)
-})
-
-const totalProducts = computed(() => allProducts.value.length)
+const totalFiltered = computed(() => store.publicProductMeta.total)
+const totalPages = computed(() => store.publicProductMeta.lastPage)
+const filteredProducts = computed(() => allProducts.value)
+const totalProducts = computed(() => totalFiltered.value)
 
 function goToPage(page: number) {
   if (page >= 1 && page <= totalPages.value) {
@@ -122,10 +64,44 @@ function goToPage(page: number) {
   }
 }
 
-// Reset to page 1 when filters change
-watch([selectedCategory, selectedBrands, priceFrom, priceTo, sortBy], () => {
+async function fetchServerProducts() {
+  await store.fetchPublicProducts({
+    page: currentPage.value,
+    per_page: perPage,
+    cat: selectedCategory.value || undefined,
+    brand: selectedBrands.value.length ? selectedBrands.value.join(',') : undefined,
+    min_price: priceFrom.value ?? undefined,
+    max_price: priceTo.value ?? undefined,
+    sort: sortBy.value,
+    deal: route.query.deal === 'hot' ? 'hot' : undefined,
+  })
+}
+
+// Reset về trang 1 khi bộ lọc đổi, dữ liệu được lấy từ server.
+watch(() => [selectedCategory.value, selectedBrands.value.join('|'), priceFrom.value, priceTo.value, sortBy.value], () => {
   currentPage.value = 1
+  fetchServerProducts()
 })
+
+watch(currentPage, fetchServerProducts)
+
+watch(() => route.query, () => {
+  syncFiltersFromRoute()
+  currentPage.value = 1
+  fetchServerProducts()
+})
+
+function brandKey(brand: string) {
+  return brand.trim().toLowerCase()
+}
+
+function syncFiltersFromRoute() {
+  const cat = route.query.cat
+  selectedCategory.value = typeof cat === 'string' ? cat : ''
+
+  const brand = route.query.brand
+  selectedBrands.value = typeof brand === 'string' && brand.trim() ? [brand.trim()] : []
+}
 
 function toggleBrand(brand: string) {
   const idx = selectedBrands.value.indexOf(brand)
@@ -134,7 +110,8 @@ function toggleBrand(brand: string) {
 }
 
 function applyPrice() {
-  // already reactive
+  currentPage.value = 1
+  fetchServerProducts()
 }
 
 function selectCategory(catLink: string) {
@@ -151,12 +128,46 @@ function clearFilters() {
 
 // Brand count
 function brandCount(brand: string) {
-  return allProducts.value.filter(p => p.brand === brand).length
+  return store.publicBrandFacets.find((item) => item.brand === brand)?.count
+    || allProducts.value.filter(p => brandKey(p.brand) === brandKey(brand)).length
 }
 
 // Mobile filter toggle
 const showFilter = ref(false)
+
+// Đóng bằng Esc
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && showFilter.value) showFilter.value = false
+}
+onMounted(() => {
+  syncFiltersFromRoute()
+  fetchServerProducts()
+  document.addEventListener('keydown', onKeydown)
+})
+onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
+
+<style scoped>
+.ym-plp__cat-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.ym-plp__cat-btn:focus { outline: none; }
+.ym-plp__cat-btn:focus-visible {
+  outline: 2px solid var(--color-primary, #326e51);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+</style>
 
 <template>
   <div class="ym-plp">
@@ -172,48 +183,62 @@ const showFilter = ref(false)
     <div class="container ym-plp__layout">
       <!-- Mobile filter toggle -->
       <div class="ym-plp__filter-toggle-wrap">
-        <button class="ym-plp__filter-toggle" @click="showFilter = !showFilter">
-          <i class="ri-filter-3-line"></i> Bộ lọc
+        <button
+          type="button"
+          class="ym-plp__filter-toggle"
+          :aria-expanded="showFilter"
+          aria-controls="ym-plp-sidebar"
+          @click="showFilter = !showFilter"
+        >
+          <i class="ri-filter-3-line" aria-hidden="true"></i> Bộ lọc
         </button>
       </div>
 
       <!-- Overlay -->
-      <div v-if="showFilter" class="ym-plp__overlay" @click="showFilter = false"></div>
+      <div v-if="showFilter" class="ym-plp__overlay" @click="showFilter = false" aria-hidden="true"></div>
 
       <!-- Sidebar -->
-      <aside class="ym-plp__sidebar" :class="{ 'ym-plp__sidebar--open': showFilter }">
+      <aside id="ym-plp-sidebar" class="ym-plp__sidebar" :class="{ 'ym-plp__sidebar--open': showFilter }" aria-label="Bộ lọc sản phẩm">
         <!-- Categories -->
         <div class="ym-plp__filter-group">
-          <h4 class="ym-plp__filter-title">DANH MỤC</h4>
-          <ul class="ym-plp__cat-list">
+          <h2 class="ym-plp__filter-title">DANH MỤC</h2>
+          <ul class="ym-plp__cat-list" role="list">
             <li
               v-for="cat in sidebarCategories"
               :key="cat.id"
               class="ym-plp__cat-item"
               :class="{ 'ym-plp__cat-item--active': cat.link.includes(selectedCategory) && selectedCategory }"
-              @click="selectCategory(cat.link)"
             >
-              {{ cat.name }}
-              <i class="ri-arrow-right-s-line"></i>
+              <button
+                type="button"
+                class="ym-plp__cat-btn"
+                :aria-current="cat.link.includes(selectedCategory) && selectedCategory ? 'true' : undefined"
+                @click="selectCategory(cat.link)"
+              >
+                {{ cat.name }}
+                <i class="ri-arrow-right-s-line" aria-hidden="true"></i>
+              </button>
             </li>
           </ul>
         </div>
 
         <!-- Price Range -->
-        <div class="ym-plp__filter-group">
-          <h4 class="ym-plp__filter-title">KHOẢNG GIÁ</h4>
+        <fieldset class="ym-plp__filter-group">
+          <legend class="ym-plp__filter-title">KHOẢNG GIÁ</legend>
           <div class="ym-plp__price-inputs">
-            <input v-model.number="priceFrom" type="number" placeholder="₫ TỪ" />
-            <span>-</span>
-            <input v-model.number="priceTo" type="number" placeholder="₫ ĐẾN" />
+            <label for="ym-plp-price-from" class="visually-hidden">Giá từ</label>
+            <input id="ym-plp-price-from" v-model.number="priceFrom" type="number" min="0" inputmode="numeric" placeholder="₫ TỪ" />
+            <span aria-hidden="true">-</span>
+            <label for="ym-plp-price-to" class="visually-hidden">Giá đến</label>
+            <input id="ym-plp-price-to" v-model.number="priceTo" type="number" min="0" inputmode="numeric" placeholder="₫ ĐẾN" />
           </div>
-          <button class="ym-plp__price-btn" @click="applyPrice">Áp dụng</button>
-        </div>
+          <button type="button" class="ym-plp__price-btn" @click="applyPrice">Áp dụng</button>
+        </fieldset>
 
         <!-- Brands -->
-        <div class="ym-plp__filter-group">
-          <h4 class="ym-plp__filter-title">THƯƠNG HIỆU</h4>
-          <ul class="ym-plp__brand-list">
+        <fieldset class="ym-plp__filter-group">
+          <legend class="ym-plp__filter-title">THƯƠNG HIỆU</legend>
+          <ul class="ym-plp__brand-list" role="list">
             <li v-for="brand in allBrands" :key="brand" class="ym-plp__brand-item">
               <label>
                 <input
@@ -225,11 +250,16 @@ const showFilter = ref(false)
               </label>
             </li>
           </ul>
-        </div>
+        </fieldset>
 
         <!-- Clear filters -->
-        <button v-if="selectedCategory || selectedBrands.length || priceFrom || priceTo" class="ym-plp__clear-btn" @click="clearFilters">
-          <i class="ri-close-line"></i> Xóa bộ lọc
+        <button
+          v-if="selectedCategory || selectedBrands.length || priceFrom || priceTo"
+          type="button"
+          class="ym-plp__clear-btn"
+          @click="clearFilters"
+        >
+          <i class="ri-close-line" aria-hidden="true"></i> Xóa bộ lọc
         </button>
       </aside>
 
@@ -242,73 +272,88 @@ const showFilter = ref(false)
 
         <!-- Sort bar -->
         <div class="ym-plp__sort-bar">
-          <div class="ym-plp__sort-tabs">
-            <button :class="{ active: sortBy === 'newest' }" @click="sortBy = 'newest'">Mới nhất</button>
-            <button :class="{ active: sortBy === 'bestseller' }" @click="sortBy = 'bestseller'">Bán chạy</button>
-            <button :class="{ active: sortBy === 'price-asc' }" @click="sortBy = 'price-asc'">Giá thấp đến cao</button>
-            <button :class="{ active: sortBy === 'price-desc' }" @click="sortBy = 'price-desc'">Giá cao đến thấp</button>
+          <div class="ym-plp__sort-tabs" role="group" aria-label="Sắp xếp sản phẩm">
+            <button type="button" :class="{ active: sortBy === 'newest' }" :aria-pressed="sortBy === 'newest'" @click="sortBy = 'newest'">Mới nhất</button>
+            <button type="button" :class="{ active: sortBy === 'bestseller' }" :aria-pressed="sortBy === 'bestseller'" @click="sortBy = 'bestseller'">Bán chạy</button>
+            <button type="button" :class="{ active: sortBy === 'price-asc' }" :aria-pressed="sortBy === 'price-asc'" @click="sortBy = 'price-asc'">Giá thấp đến cao</button>
+            <button type="button" :class="{ active: sortBy === 'price-desc' }" :aria-pressed="sortBy === 'price-desc'" @click="sortBy = 'price-desc'">Giá cao đến thấp</button>
           </div>
-          <div class="ym-plp__sort-display">
-            Hiển thị {{ perPage }} / trang
+          <div class="ym-plp__sort-display" aria-live="polite">
+            Hiển thị {{ filteredProducts.length }} / {{ totalFiltered }}
           </div>
         </div>
 
         <!-- Product grid -->
-        <div class="ym-plp__grid">
+        <div class="ym-plp__grid" role="list">
           <RouterLink
             v-for="product in filteredProducts"
             :key="product.id"
             :to="`/products/${product.id}`"
             class="ym-plp__product"
+            role="listitem"
+            :aria-label="product.name"
           >
             <div class="ym-plp__product-img-wrap">
-              <span v-if="product.discount" class="ym-plp__product-badge">-{{ product.discount }}%</span>
-              <img :src="product.image" :alt="product.name" class="ym-plp__product-img" />
+              <span v-if="product.discount" class="ym-plp__product-badge" :aria-label="`Giảm ${product.discount}%`">-{{ product.discount }}%</span>
+              <img
+                :src="product.image"
+                :alt="product.name || ''"
+                loading="lazy"
+                decoding="async"
+                class="ym-plp__product-img"
+              />
             </div>
             <div class="ym-plp__product-info">
               <span class="ym-plp__product-brand">{{ product.brand }}</span>
               <h3 class="ym-plp__product-name">{{ product.name }}</h3>
               <div class="ym-plp__product-prices">
-                <span v-if="product.originalPrice !== product.salePrice" class="ym-plp__product-original">{{ formatPrice(product.originalPrice) }}</span>
-                <span class="ym-plp__product-sale">{{ formatPrice(product.salePrice) }}</span>
+                <span v-if="product.originalPrice !== product.salePrice" class="ym-plp__product-original" :aria-label="`Giá gốc ${formatPrice(product.originalPrice)}`">{{ formatPrice(product.originalPrice) }}</span>
+                <span class="ym-plp__product-sale" :aria-label="`Giá bán ${formatPrice(product.salePrice)}`">{{ formatPrice(product.salePrice) }}</span>
               </div>
             </div>
           </RouterLink>
         </div>
 
         <!-- Empty state -->
-        <div v-if="filteredProducts.length === 0" class="ym-plp__empty">
-          <i class="ri-search-line"></i>
+        <div v-if="filteredProducts.length === 0" class="ym-plp__empty" role="status">
+          <i class="ri-search-line" aria-hidden="true"></i>
           <p>Không tìm thấy sản phẩm phù hợp</p>
-          <button class="ym-plp__clear-btn" @click="clearFilters">Xóa bộ lọc</button>
+          <button type="button" class="ym-plp__clear-btn" @click="clearFilters">Xóa bộ lọc</button>
         </div>
 
         <!-- Pagination -->
-        <div v-if="totalPages > 1" class="ym-plp__pagination">
+        <nav v-if="totalPages > 1" class="ym-plp__pagination" aria-label="Phân trang">
           <button
+            type="button"
             class="ym-plp__page-btn"
+            aria-label="Trang trước"
             :disabled="currentPage === 1"
             @click="goToPage(currentPage - 1)"
           >
-            <i class="ri-arrow-left-s-line"></i>
+            <i class="ri-arrow-left-s-line" aria-hidden="true"></i>
           </button>
           <button
             v-for="page in totalPages"
             :key="page"
+            type="button"
             class="ym-plp__page-btn"
             :class="{ 'ym-plp__page-btn--active': page === currentPage }"
+            :aria-label="`Trang ${page}`"
+            :aria-current="page === currentPage ? 'page' : undefined"
             @click="goToPage(page)"
           >
             {{ page }}
           </button>
           <button
+            type="button"
             class="ym-plp__page-btn"
+            aria-label="Trang sau"
             :disabled="currentPage === totalPages"
             @click="goToPage(currentPage + 1)"
           >
-            <i class="ri-arrow-right-s-line"></i>
+            <i class="ri-arrow-right-s-line" aria-hidden="true"></i>
           </button>
-        </div>
+        </nav>
       </main>
     </div>
   </div>

@@ -1,5 +1,27 @@
 <script setup lang="ts">
-import { newsArticles, newsCategories } from '../configs'
+import { onMounted, ref } from 'vue'
+import api from '@/services/api'
+import { newsArticles as fallbackArticles, newsCategories as fallbackCategories, type NewsArticle, type NewsCategory } from '../configs'
+
+const newsArticles = ref<NewsArticle[]>(fallbackArticles)
+const newsCategories = ref<NewsCategory[]>(fallbackCategories)
+
+onMounted(async () => {
+  try {
+    const res = await api.get('/shop/news/public')
+    const data = res.data.data || []
+    if (data.length) {
+      newsArticles.value = data.map((item: NewsArticle, idx: number) => ({
+        ...item,
+        image: item.image || fallbackArticles[idx % fallbackArticles.length]?.image || '',
+      }))
+      newsCategories.value = res.data.categories?.length ? res.data.categories : fallbackCategories
+    }
+  } catch {
+    newsArticles.value = fallbackArticles
+    newsCategories.value = fallbackCategories
+  }
+})
 </script>
 
 <template>
@@ -16,23 +38,24 @@ import { newsArticles, newsCategories } from '../configs'
       <div class="ym-news__layout">
         <!-- Main content -->
         <div class="ym-news__main">
-          <RouterLink
+          <article
             v-for="article in newsArticles"
             :key="article.id"
-            :to="'/news/' + article.slug"
-            class="ym-news__card"
+            class="ym-news__card-wrap"
           >
-            <div class="ym-news__card-img">
-              <img :src="article.image" :alt="article.title" />
-            </div>
-            <div class="ym-news__card-body">
-              <h2 class="ym-news__card-title">{{ article.title }}</h2>
-              <p class="ym-news__card-excerpt">{{ article.excerpt }}</p>
-              <span v-if="article.comments > 0" class="ym-news__card-comments">
-                {{ article.comments }} COMMENT
-              </span>
-            </div>
-          </RouterLink>
+            <RouterLink :to="'/news/' + article.slug" class="ym-news__card" :aria-label="article.title">
+              <div class="ym-news__card-img">
+                <img :src="article.image" :alt="article.title || ''" loading="lazy" decoding="async" />
+              </div>
+              <div class="ym-news__card-body">
+                <h2 class="ym-news__card-title">{{ article.title }}</h2>
+                <p class="ym-news__card-excerpt">{{ article.excerpt }}</p>
+                <span v-if="article.comments > 0" class="ym-news__card-comments">
+                  {{ article.comments }} COMMENT
+                </span>
+              </div>
+            </RouterLink>
+          </article>
         </div>
 
         <!-- Sidebar -->
