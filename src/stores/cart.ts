@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { accountApi } from '../services/api'
 
 export interface CartItem {
   id: number
@@ -78,12 +79,32 @@ export const useCartStore = defineStore('cart', () => {
 
   // ── Orders ──
   const lastOrder = ref<OrderInfo | null>(null)
-  let orderCounter = 1000
 
-  function placeOrder(customer: OrderInfo['customer'], paymentMethod: string): OrderInfo {
-    orderCounter++
+  // Gọi BE tạo đơn (auth required). BE tự gắn user_id = Auth::id() vào data.
+  async function placeOrder(
+    customer: OrderInfo['customer'],
+    paymentMethod: string,
+    paymentMethodKey: string,
+  ): Promise<OrderInfo> {
+    const payload = {
+      items: items.value.map(i => ({
+        id: i.id,
+        name: i.name,
+        quantity: i.quantity,
+        price: i.price,
+        image: i.image,
+      })),
+      subtotal: subtotal.value,
+      total: subtotal.value,
+      payment_method: paymentMethodKey,
+      customer,
+    }
+
+    const res = await accountApi.createOrder(payload)
+    const created = res.data?.data?.order ?? {}
+
     const order: OrderInfo = {
-      id: orderCounter,
+      id: Number(created.id ?? 0),
       date: new Date().toLocaleDateString('vi-VN'),
       items: [...items.value],
       subtotal: subtotal.value,

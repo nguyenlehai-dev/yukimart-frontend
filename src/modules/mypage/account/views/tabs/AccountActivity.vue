@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { accountApi } from '../../../../../services/api'
 
 interface Activity {
   id: number
@@ -18,52 +19,52 @@ interface Activity {
   }
 }
 
-const activities = ref<Activity[]>([
-  {
-    id: 1,
-    type: 'review',
-    date: '16 Thg 10, 2026',
-    product: {
-      name: 'Kem Chống Nắng La Roche-Posay Anthelios 50ml',
-      image: 'https://hasaki.vn/images/graphics/no-image.jpg'
-    },
-    rating: 5,
-    content: 'Chất kem rất thích, thấm nhanh không bị bết rít. Giao hàng cực kỳ nhanh, sẽ ủng hộ shop tiếp vào đợt sale tới.',
-    reply: {
-      author: 'YukiMart Official',
-      content: 'Chào bạn, cảm ơn bạn đã tin dùng sản phẩm của YukiMart. Chúc bạn một ngày tốt lành và luôn tự tin rạng rỡ nhé!',
-      date: '16 Thg 10, 2026'
-    }
-  },
-  {
-    id: 2,
-    type: 'comment',
-    date: '10 Thg 10, 2026',
-    product: {
-      name: 'Nước Tẩy Trang L\'Oreal 3 in 1 Micellar Water',
-      image: 'https://hasaki.vn/images/graphics/no-image.jpg'
-    },
-    content: 'Sản phẩm này hiện tại ở chi nhánh Quận 10 còn hàng không shop, date đến bao giờ ạ?',
-    reply: {
-      author: 'YukiMart CSKH',
-      content: 'Dạ chào bạn, chi nhánh Q10 hiện vẫn còn sẵn hàng. Lô hàng hiện tại có hạn sử dụng (EXP) lến đến tháng 12/2028 ạ. Mời bạn ghé shop nhé!',
-      date: '10 Thg 10, 2026'
-    }
-  },
-  {
-    id: 3,
-    type: 'review',
-    date: '05 Thg 10, 2026',
-    product: {
-      name: 'Serum Phục Hồi Da B5 Giảm Khuyết Điểm',
-      image: 'https://hasaki.vn/images/graphics/no-image.jpg'
-    },
-    rating: 4,
-    content: 'Dùng khá thích, da có ẩm mượt hơn sau 2 tuần. Tuy nhiên giá hơi cao xíu so với dung tích.',
-  }
-])
+const activities = ref<Activity[]>([])
+const loading = ref(true)
+const loadError = ref('')
 
-import { computed } from 'vue'
+const FALLBACK_IMG = 'https://hasaki.vn/images/graphics/no-image.jpg'
+
+function formatDate(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return String(iso)
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function mapActivity(raw: any): Activity {
+  const hasRating = raw.rating !== undefined && raw.rating !== null && Number(raw.rating) > 0
+  return {
+    id: Number(raw.id),
+    type: hasRating ? 'review' : 'comment',
+    date: formatDate(raw.createdAt) || String(raw.date ?? ''),
+    product: {
+      name: String(raw.product_name ?? raw.product?.name ?? ''),
+      image: String(raw.product_image ?? raw.product?.image ?? FALLBACK_IMG),
+    },
+    content: String(raw.content ?? raw.body ?? ''),
+    rating: hasRating ? Number(raw.rating) : undefined,
+    reply: raw.reply
+      ? {
+          author: String(raw.reply.author ?? 'YukiMart'),
+          content: String(raw.reply.content ?? ''),
+          date: formatDate(raw.reply.date) || String(raw.reply.date ?? ''),
+        }
+      : undefined,
+  }
+}
+
+onMounted(async () => {
+  try {
+    const res = await accountApi.activities()
+    const items = res.data?.data?.items ?? []
+    activities.value = items.map(mapActivity)
+  } catch (err: any) {
+    loadError.value = err?.response?.data?.message || 'Không tải được hoạt động'
+  } finally {
+    loading.value = false
+  }
+})
 
 const typeFilter = ref<'all' | 'review' | 'comment'>('all')
 
@@ -91,6 +92,19 @@ const emptyText = computed(() => {
       <p class="ym-acc-section-desc">Theo dõi các đánh giá, bình luận và phản hồi từ hệ thống</p>
     </div>
 
+    <!-- Loading -->
+    <div v-if="loading" class="ym-acc-empty" role="status" aria-busy="true">
+      <div class="ym-acc-empty__icon" aria-hidden="true"><i class="ri-loader-4-line"></i></div>
+      <h3 class="ym-acc-empty__title">Đang tải hoạt động...</h3>
+    </div>
+    <!-- Error -->
+    <div v-else-if="loadError" class="ym-acc-empty" role="alert">
+      <div class="ym-acc-empty__icon" aria-hidden="true"><i class="ri-error-warning-line"></i></div>
+      <h3 class="ym-acc-empty__title">Không tải được dữ liệu</h3>
+      <p class="ym-acc-empty__desc">{{ loadError }}</p>
+    </div>
+
+    <template v-else>
     <!-- Filter tabs -->
     <div class="ym-acc-tabs-wrap">
       <div class="ym-acc-tabs" role="group" aria-label="Lọc hoạt động">
@@ -175,5 +189,6 @@ const emptyText = computed(() => {
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>

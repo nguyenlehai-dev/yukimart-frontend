@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useCartStore } from '../../../../stores/cart'
+import { useAuthStore } from '../../../../stores/auth'
 import { useRouter } from 'vue-router'
 
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 const router = useRouter()
 
 const formatPrice = (price: number) =>
@@ -23,10 +25,17 @@ const note = ref('')
 const paymentMethod = ref('bank_transfer')
 
 const formError = ref('')
+const submitting = ref(false)
 const formRef = ref<HTMLFormElement | null>(null)
 
-function handlePlaceOrder() {
+async function handlePlaceOrder() {
   formError.value = ''
+
+  if (!authStore.isLoggedIn) {
+    formError.value = 'Vui lòng đăng nhập để đặt hàng'
+    router.push('/?login=true')
+    return
+  }
 
   if (!firstName.value || !lastName.value || !phone.value || !email.value || !address.value || !city.value) {
     formError.value = 'Vui lòng điền đầy đủ thông tin bắt buộc (*)'
@@ -34,23 +43,30 @@ function handlePlaceOrder() {
     return
   }
 
-  cartStore.placeOrder(
-    {
-      firstName: firstName.value,
-      lastName: lastName.value,
-      company: company.value,
-      country: country.value,
-      address: address.value,
-      postalCode: postalCode.value,
-      city: city.value,
-      phone: phone.value,
-      email: email.value,
-      note: note.value,
-    },
-    paymentMethod.value === 'bank_transfer' ? 'Chuyển khoản ngân hàng' : 'Trả tiền mặt khi nhận hàng',
-  )
-
-  router.push('/order-confirm')
+  submitting.value = true
+  try {
+    await cartStore.placeOrder(
+      {
+        firstName: firstName.value,
+        lastName: lastName.value,
+        company: company.value,
+        country: country.value,
+        address: address.value,
+        postalCode: postalCode.value,
+        city: city.value,
+        phone: phone.value,
+        email: email.value,
+        note: note.value,
+      },
+      paymentMethod.value === 'bank_transfer' ? 'Chuyển khoản ngân hàng' : 'Trả tiền mặt khi nhận hàng',
+      paymentMethod.value,
+    )
+    router.push('/order-confirm')
+  } catch (err: any) {
+    formError.value = err?.response?.data?.message || 'Đặt hàng thất bại. Vui lòng thử lại.'
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -143,8 +159,8 @@ function handlePlaceOrder() {
             </fieldset>
 
             <!-- Submit button (mobile only, desktop uses sidebar) -->
-            <button type="submit" class="ym-checkout__btn-order ym-checkout__btn-order--mobile">
-              ĐẶT HÀNG
+            <button type="submit" class="ym-checkout__btn-order ym-checkout__btn-order--mobile" :disabled="submitting">
+              {{ submitting ? 'ĐANG XỬ LÝ…' : 'ĐẶT HÀNG' }}
             </button>
           </form>
         </div>
@@ -200,8 +216,8 @@ function handlePlaceOrder() {
             </fieldset>
 
             <!-- Liên kết với form bằng `form` attribute để Enter trên field bất kỳ vẫn submit -->
-            <button type="submit" form="ym-checkout-form" class="ym-checkout__btn-order">
-              ĐẶT HÀNG
+            <button type="submit" form="ym-checkout-form" class="ym-checkout__btn-order" :disabled="submitting">
+              {{ submitting ? 'ĐANG XỬ LÝ…' : 'ĐẶT HÀNG' }}
             </button>
 
             <p class="ym-checkout__privacy-note">

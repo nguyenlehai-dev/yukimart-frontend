@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { accountApi } from '../../../../../services/api'
 
+type OrderStatus = 'pending' | 'processing' | 'shipping' | 'completed' | 'cancelled'
 interface Order {
   id: string
   date: string
   items: number
   total: number
-  status: 'pending' | 'processing' | 'shipping' | 'completed' | 'cancelled'
+  status: OrderStatus
   paymentMethod: string
   details: {
     name: string
@@ -16,44 +18,51 @@ interface Order {
   }[]
 }
 
-// ── Mock Data ──
-const orders = ref<Order[]>([
-  {
-    id: '#YM-1025-AX8',
-    date: '15 Thg 10, 2026',
-    items: 3,
-    total: 850000,
-    status: 'completed',
-    paymentMethod: 'Thanh toán COD',
-    details: [
-      { name: 'Kem Chống Nắng La Roche-Posay Anthelios 50ml', quantity: 1, price: 350000, image: 'https://hasaki.vn/images/graphics/no-image.jpg' },
-      { name: 'Nước Tẩy Trang L\'Oreal 3 in 1 Micellar Water', quantity: 2, price: 250000, image: 'https://hasaki.vn/images/graphics/no-image.jpg' }
-    ]
-  },
-  {
-    id: '#YM-1042-BY9',
-    date: '18 Thg 10, 2026',
-    items: 1,
-    total: 1250000,
-    status: 'shipping',
-    paymentMethod: 'VNPAY',
-    details: [
-      { name: 'Serum Phục Hồi Da B5 Giảm Khuyết Điểm', quantity: 1, price: 1250000, image: 'https://hasaki.vn/images/graphics/no-image.jpg' }
-    ]
-  },
-  {
-    id: '#YM-1055-CZ1',
-    date: '20 Thg 10, 2026',
-    items: 2,
-    total: 450000,
-    status: 'processing',
-    paymentMethod: 'Ví Momo',
-    details: [
-      { name: 'Sữa Rửa Mặt CeraVe Hydrating', quantity: 1, price: 350000, image: 'https://hasaki.vn/images/graphics/no-image.jpg' },
-      { name: 'Bông Tẩy Trang Silcot 82 Miếng', quantity: 1, price: 100000, image: 'https://hasaki.vn/images/graphics/no-image.jpg' }
-    ]
+const orders = ref<Order[]>([])
+const loading = ref(true)
+const loadError = ref('')
+
+const FALLBACK_IMG = 'https://hasaki.vn/images/graphics/no-image.jpg'
+const VALID_STATUSES: OrderStatus[] = ['pending', 'processing', 'shipping', 'completed', 'cancelled']
+
+function formatDate(iso?: string, fallback?: string): string {
+  const src = iso || fallback
+  if (!src) return ''
+  const d = new Date(src)
+  if (isNaN(d.getTime())) return String(src)
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function mapOrder(raw: any): Order {
+  const details = Array.isArray(raw.details ?? raw.items_detail) ? (raw.details ?? raw.items_detail) : []
+  const status = VALID_STATUSES.includes(raw.status) ? raw.status as OrderStatus : 'processing'
+  return {
+    id: String(raw.code ?? raw.order_code ?? raw.id ?? ''),
+    date: formatDate(raw.createdAt, raw.date),
+    items: Number(raw.items ?? details.length ?? 0),
+    total: Number(raw.total ?? raw.amount ?? 0),
+    status,
+    paymentMethod: String(raw.payment_method ?? raw.paymentMethod ?? ''),
+    details: details.map((d: any) => ({
+      name: String(d.name ?? ''),
+      quantity: Number(d.quantity ?? d.qty ?? 1),
+      price: Number(d.price ?? 0),
+      image: String(d.image ?? FALLBACK_IMG),
+    })),
   }
-])
+}
+
+onMounted(async () => {
+  try {
+    const res = await accountApi.orders()
+    const items = res.data?.data?.items ?? []
+    orders.value = items.map(mapOrder)
+  } catch (err: any) {
+    loadError.value = err?.response?.data?.message || 'Không tải được danh sách đơn hàng'
+  } finally {
+    loading.value = false
+  }
+})
 
 // ── State ──
 const statusFilter = ref('all')
@@ -141,6 +150,20 @@ const emptyStateText = computed(() => {
       <p class="ym-acc-section-desc">Theo dõi tiến trình và quản lý các đơn hàng đã đặt</p>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="loading" class="ym-acc-empty" role="status" aria-busy="true">
+      <div class="ym-acc-empty__icon" aria-hidden="true"><i class="ri-loader-4-line"></i></div>
+      <h3 class="ym-acc-empty__title">Đang tải đơn hàng...</h3>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="loadError" class="ym-acc-empty" role="alert">
+      <div class="ym-acc-empty__icon" aria-hidden="true"><i class="ri-error-warning-line"></i></div>
+      <h3 class="ym-acc-empty__title">Không tải được dữ liệu</h3>
+      <p class="ym-acc-empty__desc">{{ loadError }}</p>
+    </div>
+
+    <template v-else>
     <!-- Soft Underline Tabs với count -->
     <div class="ym-acc-tabs-wrap">
       <div class="ym-acc-tabs" role="group" aria-label="Lọc đơn hàng theo trạng thái">
@@ -251,5 +274,6 @@ const emptyStateText = computed(() => {
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>

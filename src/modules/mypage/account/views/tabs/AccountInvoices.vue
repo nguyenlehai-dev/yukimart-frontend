@@ -1,19 +1,53 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { accountApi } from '../../../../../services/api'
 
+type InvoiceStatus = 'issued' | 'pending' | 'cancelled'
 interface Invoice {
   id: string
   date: string
   amount: number
-  status: 'issued' | 'pending' | 'cancelled'
+  status: InvoiceStatus
   company: string
 }
 
-const invoices = ref<Invoice[]>([
-  { id: 'HD-2026-0012', date: '18/09/2025', amount: 1721000, status: 'issued', company: 'YukiMart Viet Nam' },
-  { id: 'HD-2025-0894', date: '29/06/2025', amount: 2640000, status: 'issued', company: 'YukiMart Viet Nam' },
-  { id: 'HD-2024-0011', date: '04/07/2024', amount: 3240000, status: 'issued', company: 'YukiMart Viet Nam' },
-])
+const invoices = ref<Invoice[]>([])
+const loading = ref(true)
+const loadError = ref('')
+
+const VALID_STATUSES: InvoiceStatus[] = ['issued', 'pending', 'cancelled']
+
+function isoToDdMmYyyy(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return String(iso)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}/${mm}/${d.getFullYear()}`
+}
+
+function mapInvoice(raw: any): Invoice {
+  const status: InvoiceStatus = VALID_STATUSES.includes(raw.status) ? raw.status : 'issued'
+  return {
+    id: String(raw.code ?? raw.invoice_code ?? raw.id ?? ''),
+    date: raw.date ? String(raw.date) : isoToDdMmYyyy(raw.createdAt),
+    amount: Number(raw.amount ?? raw.total ?? 0),
+    status,
+    company: String(raw.company ?? 'YukiMart Viet Nam'),
+  }
+}
+
+onMounted(async () => {
+  try {
+    const res = await accountApi.invoices()
+    const items = res.data?.data?.items ?? []
+    invoices.value = items.map(mapInvoice)
+  } catch (err: any) {
+    loadError.value = err?.response?.data?.message || 'Không tải được hoá đơn'
+  } finally {
+    loading.value = false
+  }
+})
 
 const statusMap: Record<Invoice['status'], { label: string; class: string; icon: string }> = {
   issued: { label: 'Đã xuất', class: 'is-success', icon: 'ri-checkbox-circle-line' },
@@ -75,6 +109,19 @@ function downloadAll() {
       <p class="ym-acc-panel__desc">Tra cứu và tải xuống bản thể hiện hoá đơn VAT điện tử</p>
     </div>
 
+    <!-- Loading -->
+    <div v-if="loading" class="ym-acc-empty" role="status" aria-busy="true">
+      <div class="ym-acc-empty__icon" aria-hidden="true"><i class="ri-loader-4-line"></i></div>
+      <h3 class="ym-acc-empty__title">Đang tải hoá đơn...</h3>
+    </div>
+    <!-- Error -->
+    <div v-else-if="loadError" class="ym-acc-empty" role="alert">
+      <div class="ym-acc-empty__icon" aria-hidden="true"><i class="ri-error-warning-line"></i></div>
+      <h3 class="ym-acc-empty__title">Không tải được dữ liệu</h3>
+      <p class="ym-acc-empty__desc">{{ loadError }}</p>
+    </div>
+
+    <template v-else>
     <!-- Stats -->
     <div class="ym-invoices__stats" role="group" aria-label="Tổng quan hoá đơn">
       <div class="ym-invoices-stat">
@@ -232,6 +279,7 @@ function downloadAll() {
         </table>
       </div>
     </div>
+    </template>
   </div>
 </template>
 

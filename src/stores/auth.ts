@@ -123,9 +123,9 @@ export const useAuthStore = defineStore('auth', () => {
       if (res.data.success) {
         if (res.data.data?.access_token) {
           setAuthToken(res.data.data.access_token)
-        }
-        if (res.data.data?.user) {
-          user.value = res.data.data.user
+          if (res.data.data?.user) {
+            user.value = res.data.data.user
+          }
         }
         return true
       }

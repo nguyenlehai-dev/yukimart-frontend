@@ -1,23 +1,53 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { accountApi } from '../../../../../services/api'
 
+type PurchaseCategory = 'upgrade' | 'renewal' | 'new' | 'support'
 interface PurchaseItem {
   id: number
   name: string
-  category: 'upgrade' | 'renewal' | 'new' | 'support'
+  category: PurchaseCategory
   date: string // dd/mm/yyyy
   amount: number // VND
 }
 
-const mockData = ref<PurchaseItem[]>([
-  { id: 1, name: 'Nâng gói Phần mềm quản lý bán hàng KiotViet', category: 'upgrade', date: '18/09/2025', amount: 1721000 },
-  { id: 2, name: 'Tái ký dịch vụ phần mềm quản lý bán hàng KiotViet', category: 'renewal', date: '29/06/2025', amount: 2640000 },
-  { id: 3, name: 'Phần mềm quản lý bán hàng KiotViet', category: 'new', date: '04/07/2024', amount: 3240000 },
-  { id: 4, name: 'Nâng gói dịch vụ phần mềm quản lý bán hàng KiotViet', category: 'upgrade', date: '05/09/2023', amount: 1800000 },
-  { id: 5, name: 'Tái ký dịch vụ phần mềm quản lý bán hàng KiotViet', category: 'renewal', date: '12/08/2022', amount: 2640000 },
-  { id: 6, name: 'Phần mềm quản lý bán hàng KiotViet (Mở rộng)', category: 'upgrade', date: '10/01/2022', amount: 1100000 },
-  { id: 7, name: 'Nâng gói dịch vụ chăm sóc khách hàng', category: 'support', date: '05/11/2021', amount: 500000 },
-])
+const mockData = ref<PurchaseItem[]>([])
+const loading = ref(true)
+const loadError = ref('')
+
+const VALID_CATEGORIES: PurchaseCategory[] = ['upgrade', 'renewal', 'new', 'support']
+
+function isoToDdMmYyyy(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return String(iso)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}/${mm}/${d.getFullYear()}`
+}
+
+function mapPurchase(raw: any): PurchaseItem {
+  const cat = VALID_CATEGORIES.includes(raw.category) ? (raw.category as PurchaseCategory) : 'new'
+  return {
+    id: Number(raw.id),
+    name: String(raw.name ?? ''),
+    category: cat,
+    date: raw.date ? String(raw.date) : isoToDdMmYyyy(raw.createdAt),
+    amount: Number(raw.amount ?? 0),
+  }
+}
+
+onMounted(async () => {
+  try {
+    const res = await accountApi.purchaseHistory()
+    const items = res.data?.data?.items ?? []
+    mockData.value = items.map(mapPurchase)
+  } catch (err: any) {
+    loadError.value = err?.response?.data?.message || 'Không tải được lịch sử mua hàng'
+  } finally {
+    loading.value = false
+  }
+})
 
 const categoryMeta: Record<PurchaseItem['category'], { label: string; icon: string; class: string }> = {
   upgrade: { label: 'Nâng cấp', icon: 'ri-arrow-up-circle-line', class: 'cat-upgrade' },
@@ -116,6 +146,19 @@ function goToPage(page: number) { currentPage.value = page }
       </div>
     </div>
 
+    <!-- Loading -->
+    <div v-if="loading" class="ym-acc-empty" role="status" aria-busy="true">
+      <div class="ym-acc-empty__icon" aria-hidden="true"><i class="ri-loader-4-line"></i></div>
+      <h3 class="ym-acc-empty__title">Đang tải lịch sử mua hàng...</h3>
+    </div>
+    <!-- Error -->
+    <div v-else-if="loadError" class="ym-acc-empty" role="alert">
+      <div class="ym-acc-empty__icon" aria-hidden="true"><i class="ri-error-warning-line"></i></div>
+      <h3 class="ym-acc-empty__title">Không tải được dữ liệu</h3>
+      <p class="ym-acc-empty__desc">{{ loadError }}</p>
+    </div>
+
+    <template v-else>
     <!-- Stats Summary -->
     <div class="ym-history__stats" role="group" aria-label="Tổng quan mua hàng">
       <div class="ym-history-stat">
@@ -265,6 +308,7 @@ function goToPage(page: number) { currentPage.value = page }
         </nav>
       </div>
     </div>
+    </template>
   </div>
 </template>
 

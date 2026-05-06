@@ -98,8 +98,12 @@ async function handleRegister() {
     return
   }
 
-  if (regPassword.value.length < 6) {
-    localError.value = 'Mật khẩu phải có ít nhất 6 ký tự'
+  if (regPassword.value.length < 8) {
+    localError.value = 'Mật khẩu phải có ít nhất 8 ký tự'
+    return
+  }
+  if (!/^(?=.*[A-Za-z])(?=.*\d).+$/.test(regPassword.value)) {
+    localError.value = 'Mật khẩu phải có cả chữ và số'
     return
   }
 
