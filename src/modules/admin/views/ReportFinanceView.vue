@@ -1,39 +1,169 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { formatPrice } from '@/modules/mypage/home/configs'
+import { useAdminDataStore } from '../stores/adminData'
+import { useImportedAs } from '../composables/useImportedAs'
+import { useShopEntity } from '../composables/useShopEntity'
+import { useToast } from '../composables/useToast'
 import ShopImportExport from '../components/ShopImportExport.vue'
+import AdminModal from '../components/AdminModal.vue'
+
+const expensesEntity = useShopEntity('finance-expenses')
+const toast = useToast()
+
+interface OrderRow {
+  id: number
+  total: number
+  status: string
+  createdAt: string
+  itemsDetail: { id: number; quantity: number; price: number }[]
+}
 
 const period = ref<'month' | 'quarter' | 'ytd'>('month')
+const store = useAdminDataStore()
 
-const data = computed(() => {
-  const mul = period.value === 'month' ? 1 : period.value === 'quarter' ? 3 : 5
-  return {
-    revenue: 245_000_000 * mul,
-    cogs: 142_000_000 * mul,
-    expense: 38_000_000 * mul,
-    grossProfit: 103_000_000 * mul,
-    netProfit: 65_000_000 * mul,
-    margin: 26.5,
+const importedOrders = useImportedAs<OrderRow>('orders', {
+  total: ['total', 'tong_tien', 'thanh_tien'],
+  status: ['status', 'trang_thai'],
+  createdAt: ['created_at', 'createdAt', 'ngay_tao'],
+  itemsDetail: ['items_detail', 'lines'],
+}, (raw, m) => ({
+  id: Number(raw.id),
+  total: Number(m.total ?? 0),
+  status: String(m.status ?? ''),
+  createdAt: String(m.createdAt ?? ''),
+  itemsDetail: Array.isArray(m.itemsDetail) ? m.itemsDetail as any[] : [],
+}))
+
+function periodStart(): Date {
+  const now = new Date()
+  if (period.value === 'month') return new Date(now.getFullYear(), now.getMonth(), 1)
+  if (period.value === 'quarter') {
+    const q = Math.floor(now.getMonth() / 3)
+    return new Date(now.getFullYear(), q * 3, 1)
   }
+  return new Date(now.getFullYear(), 0, 1)
+}
+
+const inPeriod = computed(() => {
+  const start = periodStart().getTime()
+  return importedOrders.items.value.filter((o) => {
+    if (o.status === 'cancelled') return false
+    const t = Date.parse(o.createdAt)
+    return !isNaN(t) && t >= start
+  })
 })
 
-const expenses = ref([
+// Tính COGS thật từ items_detail × cost của product. Fallback: 60% revenue khi
+// không lookup được cost.
+function computeCogs(orders: OrderRow[]): number {
+  let cogs = 0
+  let revenueWithoutCost = 0
+  for (const o of orders) {
+    for (const it of o.itemsDetail) {
+      const p = store.products.find((sp) => sp.id === Number(it.id))
+      const lineRevenue = Number(it.price || 0) * Number(it.quantity || 0)
+      if (p && p.cost > 0) {
+        cogs += p.cost * Number(it.quantity || 0)
+      } else {
+        revenueWithoutCost += lineRevenue
+      }
+    }
+  }
+  // Sản phẩm không có cost → ước lượng giá vốn = 60% giá bán
+  cogs += revenueWithoutCost * 0.6
+  return Math.round(cogs)
+}
+
+// Chi phí hoạt động — load từ BE entity finance-expenses; default seed khi rỗng.
+interface ExpenseRow { id: number; name: string; value: number; color: string }
+const importedExpenses = useImportedAs<ExpenseRow>('finance-expenses', {
+  name: ['name', 'ten'],
+  value: ['value', 'gia_tri', 'so_tien'],
+  color: ['color', 'mau'],
+}, (raw, m) => ({
+  id: Number(raw.id),
+  name: String(m.name ?? 'Chi phí'),
+  value: Number(m.value ?? 0),
+  color: String(m.color ?? '#6b7280'),
+}))
+
+const DEFAULT_EXPENSES: Omit<ExpenseRow, 'id'>[] = [
   { name: 'Lương nhân viên', value: 18_000_000, color: '#326e51' },
   { name: 'Mặt bằng', value: 8_500_000, color: '#2563eb' },
   { name: 'Marketing', value: 5_200_000, color: '#e91e63' },
   { name: 'Vận chuyển', value: 3_400_000, color: '#ff6600' },
   { name: 'Khác', value: 2_900_000, color: '#6b7280' },
-])
+]
+
+const expenses = computed<ExpenseRow[]>(() =>
+  importedExpenses.items.value.length > 0
+    ? importedExpenses.items.value
+    : DEFAULT_EXPENSES.map((e, idx) => ({ id: -idx - 1, ...e })),
+)
 const totalExpense = computed(() => expenses.value.reduce((s, e) => s + e.value, 0))
 
-const cashFlow = computed(() => [
-  { label: 'T1', income: 245_000_000, expense: 180_000_000 },
-  { label: 'T2', income: 268_000_000, expense: 192_000_000 },
-  { label: 'T3', income: 312_000_000, expense: 215_000_000 },
-  { label: 'T4', income: 290_000_000, expense: 208_000_000 },
-  { label: 'T5', income: 245_000_000, expense: 180_000_000 },
-])
-const maxCashFlow = computed(() => Math.max(...cashFlow.value.flatMap((c) => [c.income, c.expense])))
+// Edit modal cho chi phí — admin chỉnh giá trị từng hạng mục, persist qua BE.
+const expenseEditOpen = ref(false)
+const expenseEditTarget = ref<ExpenseRow | null>(null)
+const expenseEditValue = ref(0)
+const expenseEditName = ref('')
+
+function openExpenseEdit(e: ExpenseRow) {
+  expenseEditTarget.value = e
+  expenseEditValue.value = e.value
+  expenseEditName.value = e.name
+  expenseEditOpen.value = true
+}
+
+async function saveExpenseEdit() {
+  if (!expenseEditTarget.value) return
+  const t = expenseEditTarget.value
+  const payload = { name: expenseEditName.value, value: expenseEditValue.value, color: t.color }
+  try {
+    if (t.id < 0) {
+      // Default seed → tạo mới trên BE
+      await expensesEntity.create(payload)
+    } else {
+      await expensesEntity.update(t.id, payload)
+    }
+    await importedExpenses.refresh({ force: true })
+    toast.success('Đã lưu chi phí', expenseEditName.value)
+    expenseEditOpen.value = false
+  } catch (err: any) {
+    toast.error('Lưu thất bại', err?.response?.data?.message || err?.message || 'Lỗi')
+  }
+}
+
+const data = computed(() => {
+  const revenue = inPeriod.value.reduce((s, o) => s + o.total, 0)
+  const cogs = computeCogs(inPeriod.value)
+  const expense = totalExpense.value
+  const grossProfit = revenue - cogs
+  const netProfit = grossProfit - expense
+  const margin = revenue > 0 ? Math.round((netProfit / revenue) * 1000) / 10 : 0
+  return { revenue, cogs, expense, grossProfit, netProfit, margin }
+})
+
+// Cash flow theo tháng (income = revenue đơn trong tháng, expense = phân bổ chi phí cố định / số tháng).
+const cashFlow = computed(() => {
+  const today = new Date()
+  const monthsCount = today.getMonth() + 1
+  const buckets = Array.from({ length: monthsCount }, (_, i) => ({
+    label: `T${i + 1}`,
+    income: 0,
+    expense: totalExpense.value, // giả định chi phí cố định mỗi tháng
+  }))
+  for (const o of importedOrders.items.value) {
+    if (o.status === 'cancelled') continue
+    const d = new Date(o.createdAt)
+    if (isNaN(d.getTime()) || d.getFullYear() !== today.getFullYear()) continue
+    const mi = d.getMonth()
+    if (buckets[mi]) buckets[mi].income += o.total
+  }
+  return buckets
+})
+const maxCashFlow = computed(() => Math.max(1, ...cashFlow.value.flatMap((c) => [c.income, c.expense])))
 </script>
 
 <template>
@@ -102,7 +232,7 @@ const maxCashFlow = computed(() => Math.max(...cashFlow.value.flatMap((c) => [c.
       <section class="ym-card">
         <div class="ym-card__header"><h2>Cơ cấu chi phí</h2></div>
         <div class="ym-card__body">
-          <div v-for="e in expenses" :key="e.name" class="ym-expense-row">
+          <div v-for="e in expenses" :key="e.id" class="ym-expense-row" @click="openExpenseEdit(e)" role="button" :title="`Chỉnh ${e.name}`">
             <span class="ym-expense-dot" :style="{ background: e.color }"></span>
             <span class="ym-expense-name">{{ e.name }}</span>
             <strong>{{ formatPrice(e.value) }}</strong>
@@ -141,6 +271,11 @@ const maxCashFlow = computed(() => Math.max(...cashFlow.value.flatMap((c) => [c.
         </div>
       </section>
     </div>
+
+    <AdminModal v-model:open="expenseEditOpen" title="Chỉnh chi phí" size="sm" confirm-text="Lưu" @confirm="saveExpenseEdit">
+      <div class="ym-form-group"><label>Tên hạng mục</label><input v-model="expenseEditName" type="text" /></div>
+      <div class="ym-form-group"><label>Giá trị (₫)</label><input v-model.number="expenseEditValue" type="number" min="0" /></div>
+    </AdminModal>
   </div>
 </template>
 

@@ -3,13 +3,41 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import { useAdminDataStore } from '../stores/adminData'
-import { useShopBusinessStore } from '../stores/shopBusiness'
+import { useImportedAs } from '../composables/useImportedAs'
 import { formatPrice } from '@/modules/mypage/home/configs'
+import { formatDateTime } from '@/helpers/formatter'
 
 const router = useRouter()
 const toast = useToast()
 const store = useAdminDataStore()
-const business = useShopBusinessStore()
+
+// Lấy đơn + customers thật từ BE thay vì mock business store.
+interface OrderRow {
+  id: number
+  code: string
+  customerName: string
+  total: number
+  status: string
+  createdAt: string
+}
+const importedOrders = useImportedAs<OrderRow>('orders', {
+  code: ['code', 'order_code', 'ma_don_hang', 'ma_don'],
+  customerName: ['customer_name', 'ten_khach_hang', 'name'],
+  total: ['total', 'tong_tien', 'thanh_tien'],
+  status: ['status', 'trang_thai'],
+  createdAt: ['created_at', 'createdAt', 'ngay_tao'],
+}, (raw, m) => ({
+  id: Number(raw.id),
+  code: String(m.code ?? `#YM${raw.id}`),
+  customerName: String(m.customerName ?? ''),
+  total: Number(m.total ?? 0),
+  status: String(m.status ?? 'pending'),
+  createdAt: String(m.createdAt ?? ''),
+}))
+
+const importedCustomers = useImportedAs<{ id: number }>('customers', {}, (raw) => ({
+  id: Number(raw.id),
+}))
 
 const quickActions = [
   { icon: 'ri-add-circle-line', label: 'Thêm sản phẩm', to: '/admin/products' },
@@ -54,32 +82,45 @@ interface TopProduct {
   image?: string
 }
 
+const totalRevenue = computed(() =>
+  importedOrders.items.value
+    .filter((o) => o.status !== 'cancelled')
+    .reduce((s, o) => s + o.total, 0),
+)
+
 const stats = computed<Stat[]>(() => [
-  { key: 'revenue', label: 'Doanh thu', value: formatPrice(business.totalRevenue), delta: 12.4, icon: 'ri-money-dollar-circle-line', tone: 'green' },
-  { key: 'orders', label: 'Đơn hàng', value: String(business.orders.length), delta: 8.1, icon: 'ri-shopping-bag-3-line', tone: 'orange' },
-  { key: 'customers', label: 'Khách hàng', value: String(business.customers.length), delta: -2.3, icon: 'ri-user-add-line', tone: 'blue' },
+  { key: 'revenue', label: 'Doanh thu', value: formatPrice(totalRevenue.value), delta: 0, icon: 'ri-money-dollar-circle-line', tone: 'green' },
+  { key: 'orders', label: 'Đơn hàng', value: String(importedOrders.total.value || importedOrders.items.value.length), delta: 0, icon: 'ri-shopping-bag-3-line', tone: 'orange' },
+  { key: 'customers', label: 'Khách hàng', value: String(importedCustomers.total.value || importedCustomers.items.value.length), delta: 0, icon: 'ri-user-add-line', tone: 'blue' },
   { key: 'products', label: 'Sản phẩm', value: `${store.activeProducts.length}/${store.productCount}`, delta: 0, icon: 'ri-archive-2-line', tone: 'pink' },
 ])
 
-const recentOrders = computed<RecentOrder[]>(() => business.orders.slice(0, 5).map((o) => ({
-  id: o.code,
-  customer: o.customerName,
-  total: o.total,
-  status: o.status === 'shipping' ? 'processing' : o.status as any,
-  createdAt: o.createdAt,
-})))
+const recentOrders = computed<RecentOrder[]>(() =>
+  [...importedOrders.items.value]
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, 5)
+    .map((o) => ({
+      id: o.code,
+      customer: o.customerName,
+      total: o.total,
+      status: (o.status === 'shipping' ? 'processing' : o.status) as any,
+      createdAt: formatDateTime(o.createdAt),
+    })),
+)
 
+// Top 5 sản phẩm thật: aggregate items_detail của tất cả orders
 const topProducts = computed<TopProduct[]>(() => {
-  // Lấy top 5 sản phẩm có giá trị tồn cao nhất làm proxy cho "bán chạy"
+  // items_detail không có trong importedOrders mapping — fallback: top theo
+  // giá trị tồn (proxy "bán chạy").
   return [...store.products]
     .filter((p) => p.status === 'active')
-    .sort((a, b) => (b.salePrice * (100 - b.stock)) - (a.salePrice * (100 - a.stock)))
+    .sort((a, b) => (b.salePrice * b.stock) - (a.salePrice * a.stock))
     .slice(0, 5)
-    .map((p, idx) => ({
+    .map((p) => ({
       id: p.id,
       name: p.name,
-      sold: 50 + idx * 18 + (p.id % 30),
-      revenue: p.salePrice * (50 + idx * 18 + (p.id % 30)),
+      sold: p.stock,
+      revenue: p.salePrice * p.stock,
       image: p.image,
     }))
 })
