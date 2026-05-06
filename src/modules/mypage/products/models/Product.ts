@@ -62,6 +62,8 @@ export interface ProductReview {
   content: string
   verified?: boolean
   images?: string[]
+  reply?: string
+  replies?: ProductQuestionReply[]
 }
 
 export interface ProductQuestion {

@@ -143,8 +143,8 @@ function buyNow() {
       - Tiết kiệm: <span class="ym-pdp-info__price-savings">{{ formatPrice(savings) }} ({{ product.discount }}%)</span>
     </div>
 
-    <!-- Skin type -->
-    <div class="ym-pdp-info__option-row" role="radiogroup" aria-label="Loại da">
+    <!-- Skin type — chỉ hiện khi sản phẩm thực sự có lựa chọn loại da. -->
+    <div v-if="product.skinTypeOptions.length" class="ym-pdp-info__option-row" role="radiogroup" aria-label="Loại da">
       <span class="ym-pdp-info__option-label">Loại da: <strong>{{ selectedSkinType }}</strong></span>
       <div class="ym-pdp-info__option-list">
         <button
@@ -162,8 +162,8 @@ function buyNow() {
       </div>
     </div>
 
-    <!-- Volume -->
-    <div class="ym-pdp-info__option-row" role="radiogroup" aria-label="Dung tích">
+    <!-- Volume — chỉ hiện nếu sản phẩm có nhiều dung tích. -->
+    <div v-if="product.volumes.length" class="ym-pdp-info__option-row" role="radiogroup" aria-label="Dung tích">
       <span class="ym-pdp-info__option-label">Dung Tích: <strong>{{ selectedVolume }}</strong></span>
       <div class="ym-pdp-info__option-list">
         <button
@@ -236,7 +236,12 @@ function buyNow() {
     <!-- Action buttons -->
     <div class="ym-pdp-info__actions">
       <div class="ym-pdp-info__stock-info" role="status">
-        <i class="ri-checkbox-circle-fill" aria-hidden="true"></i> {{ product.stock }}/306 CN Còn hàng
+        <template v-if="product.stock > 0">
+          <i class="ri-checkbox-circle-fill" aria-hidden="true"></i> Còn hàng ({{ product.stock }} sản phẩm)
+        </template>
+        <template v-else>
+          <i class="ri-close-circle-fill" aria-hidden="true"></i> Hết hàng
+        </template>
       </div>
       <button type="button" class="ym-pdp-info__btn-cart" @click="addToCart" :aria-label="`Thêm ${product.name} vào giỏ hàng`">
         <i class="ri-shopping-cart-fill" aria-hidden="true"></i> GIỎ HÀNG
