@@ -462,7 +462,7 @@ const importMapping = ref<Record<string, string>>({})
 const updateExisting = ref(false)
 
 const importPreviewFields = computed(() => {
-  const keys = ['sku', 'barcode', 'name', 'product_type', 'category_path', 'category', 'brand', 'sale_price', 'cost', 'stock', 'reserved', 'threshold', 'unit', 'status']
+  const keys = ['sku', 'barcode', 'name', 'product_type', 'category_path', 'category', 'brand', 'original_price', 'sale_price', 'wholesale_price', 'cost', 'stock', 'reserved', 'threshold', 'unit', 'status']
   return importPreviewData.value?.fields.filter((field) => keys.includes(field.key)) || []
 })
 

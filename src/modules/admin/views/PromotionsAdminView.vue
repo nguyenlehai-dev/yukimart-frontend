@@ -192,11 +192,11 @@ async function submitForm() {
     if (editingId.value) {
       const res = await shopPromotionsApi.update(editingId.value, payload)
       const idx = promotions.value.findIndex((p) => p.id === editingId.value)
-      if (idx >= 0) promotions.value[idx] = res.data.data
+      if (idx >= 0) promotions.value[idx] = mapPromotion(res.data.data)
       toast.success('Đã cập nhật khuyến mãi', title)
     } else {
       const res = await shopPromotionsApi.create(payload)
-      promotions.value.unshift(res.data.data)
+      promotions.value.unshift(mapPromotion(res.data.data))
       toast.success('Đã tạo khuyến mãi', title)
     }
     formOpen.value = false
@@ -211,7 +211,7 @@ async function setStatus(promotion: Promotion, status: PromotionStatus) {
   try {
     const res = await shopPromotionsApi.updateStatus(promotion.id, status)
     const idx = promotions.value.findIndex((p) => p.id === promotion.id)
-    if (idx >= 0) promotions.value[idx] = res.data.data
+    if (idx >= 0) promotions.value[idx] = mapPromotion(res.data.data)
     toast.success('Đã đổi trạng thái', `${promotion.title}: ${statusMap[status].label}`)
   } catch (e: any) {
     toast.error('Đổi trạng thái thất bại', e?.response?.data?.message || e?.message)

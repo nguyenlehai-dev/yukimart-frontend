@@ -79,7 +79,7 @@ const allPriceLists = computed<PriceList[]>(() => imported.hasData.value ? impor
 
 /** Đếm SP thật được áp dụng cho 1 price list — dùng cho stats + detail modal. */
 function priceListProductCount(pl: PriceList): number {
-  if (pl.productIds === 'all') return adminData.products.length
+  if (pl.productIds === 'all') return adminData.catalogProductCount
   return Array.isArray(pl.productIds) ? pl.productIds.length : 0
 }
 
@@ -96,6 +96,7 @@ const formOpen = ref(false)
 const editingId = ref<number | null>(null)
 const detailOpen = ref(false)
 const detail = ref<PriceList | null>(null)
+const detailProductsLoading = ref(false)
 const form = ref<Omit<PriceList, 'id'>>({ code: '', name: '', appliesTo: 'all', type: 'percent', value: 0, productIds: 'all', startDate: '', endDate: '', active: true })
 
 function openCreate() {
@@ -108,7 +109,20 @@ function openEdit(p: PriceList) {
   form.value = { code: p.code, name: p.name, appliesTo: p.appliesTo, type: p.type, value: p.value, productIds: p.productIds, startDate: p.startDate, endDate: p.endDate, active: p.active }
   formOpen.value = true
 }
-function openDetail(p: PriceList) { detail.value = p; detailOpen.value = true }
+async function openDetail(p: PriceList) {
+  detail.value = p
+  detailOpen.value = true
+  if (!adminData.products.length) {
+    detailProductsLoading.value = true
+    try {
+      await adminData.fetchProductSnapshot({ all: 1, limit: 1000 })
+    } catch (e: any) {
+      toast.error('Tải sản phẩm thất bại', e?.response?.data?.message || e?.message)
+    } finally {
+      detailProductsLoading.value = false
+    }
+  }
+}
 
 function submit() {
   if (!form.value.name) return toast.error('Thiếu tên bảng giá')
@@ -150,6 +164,13 @@ function productsAffected(pl: PriceList) {
   return adminData.products.filter((p) => Array.isArray(pl.productIds) && pl.productIds.includes(p.id))
 }
 
+const detailProducts = computed(() => detail.value ? productsAffected(detail.value) : [])
+const detailProductsPreview = computed(() => detailProducts.value.slice(0, 50))
+const detailProductsMore = computed(() => detail.value
+  ? Math.max(0, priceListProductCount(detail.value) - detailProductsPreview.value.length)
+  : 0
+)
+
 function effectivePrice(originalPrice: number, pl: PriceList) {
   if (pl.type === 'percent') return Math.round(originalPrice * (1 + pl.value / 100))
   return Math.max(0, originalPrice + pl.value)
@@ -163,7 +184,7 @@ function groupsUsing(plId: number) {
 const stats = computed(() => ({
   total: allPriceLists.value.length,
   active: allPriceLists.value.filter((p) => p.active).length,
-  productsAffected: allPriceLists.value.reduce((s, pl) => s + (pl.productIds === 'all' ? adminData.products.length : (Array.isArray(pl.productIds) ? pl.productIds.length : 0)), 0),
+  productsAffected: allPriceLists.value.reduce((s, pl) => s + (pl.productIds === 'all' ? adminData.catalogProductCount : (Array.isArray(pl.productIds) ? pl.productIds.length : 0)), 0),
   promotion: allPriceLists.value.filter((p) => p.code.startsWith('KM')).length,
 }))
 
@@ -275,12 +296,13 @@ function gotoGroup() { router.push('/admin/customer-groups') }
 
       <!-- Affected products -->
       <div class="ym-pl-section">
-        <h4>Sản phẩm áp dụng ({{ productsAffected(detail).length }})</h4>
+        <h4>Sản phẩm áp dụng ({{ priceListProductCount(detail) }})</h4>
+        <div v-if="detailProductsLoading" class="ym-empty">Đang tải nhanh danh sách sản phẩm...</div>
         <div class="ym-table-wrap">
           <table class="ym-table">
             <thead><tr><th>Sản phẩm</th><th class="is-right">Giá gốc</th><th class="is-right">Giá sau áp dụng</th><th class="is-right">Chênh lệch</th></tr></thead>
             <tbody>
-              <tr v-for="p in productsAffected(detail).slice(0, 50)" :key="p.id">
+              <tr v-for="p in detailProductsPreview" :key="p.id">
                 <td>
                   <button type="button" class="ym-cell-prod" @click="gotoProduct(p.id)">
                     <img :src="p.image" :alt="p.name" />
@@ -296,11 +318,11 @@ function gotoGroup() { router.push('/admin/customer-groups') }
                   <strong>{{ formatPrice(effectivePrice(p.salePrice, detail) - p.salePrice) }}</strong>
                 </td>
               </tr>
-              <tr v-if="!productsAffected(detail).length"><td colspan="4" class="ym-empty">Không có sản phẩm.</td></tr>
+              <tr v-if="!detailProductsLoading && !detailProducts.length"><td colspan="4" class="ym-empty">Không có sản phẩm.</td></tr>
             </tbody>
           </table>
         </div>
-        <p v-if="productsAffected(detail).length > 50" style="margin-top: 8px; font-size: 12px; color: #6b7280; text-align: center">+ {{ productsAffected(detail).length - 50 }} sản phẩm khác...</p>
+        <p v-if="detailProductsMore > 0" style="margin-top: 8px; font-size: 12px; color: #6b7280; text-align: center">+ {{ detailProductsMore }} sản phẩm khác...</p>
       </div>
 
       <div style="display: flex; gap: 8px; justify-content: flex-end">

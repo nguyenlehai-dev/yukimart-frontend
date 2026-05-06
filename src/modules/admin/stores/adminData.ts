@@ -11,6 +11,7 @@ import {
   shopCategoriesApi,
   shopSectionsApi,
   shopBrandsApi,
+  shopInventoryApi,
   productToPayload,
   categoryToPayload,
   sectionToPayload,
@@ -61,6 +62,7 @@ export interface AdminCategory {
   active: boolean
   showOnMenu: boolean
   icon: string
+  productCount?: number
   description?: string
 }
 
@@ -165,10 +167,28 @@ function categoryKeywordMatches(product: Pick<AdminProduct, 'category' | 'name'>
   return false
 }
 
+function toNumber(value: any, fallback = 0) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
+}
+
 // Map API response (image filename) → frontend product (image full URL)
 function hydrateProduct(p: any): AdminProduct {
+  const salePrice = toNumber(p.salePrice ?? p.sale_price ?? p.price, 0)
+  const originalPrice = toNumber(p.originalPrice ?? p.original_price, salePrice)
+  const wholesalePrice = toNumber(p.wholesalePrice ?? p.wholesale_price, salePrice)
+  const discount = toNumber(
+    p.discount,
+    originalPrice > salePrice && salePrice > 0 ? Math.round((1 - salePrice / originalPrice) * 100) : 0
+  )
+
   return {
     ...p,
+    price: salePrice,
+    originalPrice,
+    salePrice,
+    wholesalePrice,
+    discount,
     image: resolveProductImage(p.image),
   }
 }
@@ -186,6 +206,48 @@ function hydrateBrand(b: any): ShopBrand {
     link,
     active: b.active ?? true,
     sortOrder: b.sortOrder ?? 0,
+  }
+}
+
+function toArrayValue(value: any): any[] {
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) return parsed
+    } catch {
+      return value.split(',').map((item) => item.trim()).filter(Boolean)
+    }
+  }
+  return []
+}
+
+function hydrateSection(s: any): ShopSection {
+  const key = s.section_key ?? s.sectionKey ?? s.key ?? s.id
+  return {
+    id: String(key),
+    title: String(s.title ?? s.name ?? '(Không tên)'),
+    color: String(s.color ?? '#326e51'),
+    promoImage: s.promo_image ?? s.promoImage ?? '',
+    banners: toArrayValue(s.banners) as CategorySectionData['banners'],
+    subTabs: toArrayValue(s.sub_tabs ?? s.subTabs).map(String),
+    tags: toArrayValue(s.tags).map(String),
+    productIds: toArrayValue(s.product_ids ?? s.productIds).map((id) => Number(id)).filter((id) => Number.isFinite(id)),
+    sortOrder: Number(s.sort_order ?? s.sortOrder ?? 0),
+  }
+}
+
+function hydrateCategory(c: any): AdminCategory {
+  return {
+    id: Number(c.id),
+    parentId: c.parentId ?? c.parent_id ?? null,
+    name: String(c.name ?? ''),
+    slug: String(c.slug ?? slugify(String(c.name ?? ''))),
+    active: c.active ?? true,
+    showOnMenu: c.showOnMenu ?? c.show_on_menu ?? true,
+    icon: String(c.icon ?? 'ri-folder-line'),
+    productCount: toNumber(c.productCount ?? c.product_count, 0),
+    description: c.description ?? '',
   }
 }
 
@@ -216,14 +278,16 @@ export const useAdminDataStore = defineStore('adminData', () => {
   let lastFetchAllAt = 0
   let lastFetchCatalogAt = 0
   let lastFetchHomeAt = 0
+  let lastProductStatsAt = 0
   function invalidateCache() {
     lastFetchAllAt = 0
     lastFetchCatalogAt = 0
     lastFetchHomeAt = 0
+    lastProductStatsAt = 0
   }
 
   // ── Hydrate from API ──
-  async function fetchAll(params: Record<string, any> = { all: 1 }, opts: { force?: boolean } = {}) {
+  async function fetchAll(params: Record<string, any> = { all: 1, limit: 300 }, opts: { force?: boolean } = {}) {
     if (!opts.force && loaded.value && Date.now() - lastFetchAllAt < FRESHNESS_MS) return
     const seq = ++shopLoadSeq
     loading.value = true
@@ -247,8 +311,8 @@ export const useAdminDataStore = defineStore('adminData', () => {
         lowStock: stats.lowStock ?? 0,
         totalValue: stats.totalValue ?? 0,
       }
-      categories.value = cRes.data.data || []
-      sections.value = sRes.data.data || []
+      categories.value = (cRes.data.data || []).map(hydrateCategory)
+      sections.value = (sRes.data.data || []).map(hydrateSection)
       brands.value = (bRes.data.data || []).map(hydrateBrand)
       loaded.value = true
       lastFetchAllAt = Date.now()
@@ -273,8 +337,8 @@ export const useAdminDataStore = defineStore('adminData', () => {
         shopBrandsApi.list(),
       ])
       if (seq !== shopLoadSeq) return
-      categories.value = cRes.data.data || []
-      sections.value = sRes.data.data || []
+      categories.value = (cRes.data.data || []).map(hydrateCategory)
+      sections.value = (sRes.data.data || []).map(hydrateSection)
       brands.value = (bRes.data.data || []).map(hydrateBrand)
       loaded.value = true
       lastFetchCatalogAt = Date.now()
@@ -316,6 +380,46 @@ export const useAdminDataStore = defineStore('adminData', () => {
     }
   }
 
+  async function fetchProductSnapshot(params: Record<string, any> = { all: 1, limit: 300 }, opts: { force?: boolean } = {}) {
+    if (!opts.force && products.value.length > 0 && Date.now() - lastFetchAllAt < FRESHNESS_MS) return
+    try {
+      const res = await shopProductsApi.list(params)
+      products.value = (res.data.data || []).map(hydrateProduct)
+      const stats = res.data.stats || {}
+      adminProductStats.value = {
+        total: stats.total ?? products.value.length,
+        active: stats.active ?? activeProducts.value.length,
+        outOfStock: stats.outOfStock ?? outOfStock.value.length,
+        lowStock: stats.lowStock ?? lowStock.value.length,
+        totalValue: stats.totalValue ?? totalStockValue.value,
+      }
+      adminProductBrandFacets.value = res.data.facets?.brands || []
+      lastFetchAllAt = Date.now()
+    } catch (e: any) {
+      error.value = e?.message || 'Lỗi tải sản phẩm'
+      console.error('[shopAdmin] fetchProductSnapshot failed:', e)
+      throw e
+    }
+  }
+
+  async function fetchProductStats(opts: { force?: boolean } = {}) {
+    if (!opts.force && adminProductStats.value.total > 0 && Date.now() - lastProductStatsAt < FRESHNESS_MS) return
+    try {
+      const res = await shopInventoryApi.stats()
+      const data = res.data.data || {}
+      adminProductStats.value = {
+        ...adminProductStats.value,
+        total: Number(data.totalProducts ?? adminProductStats.value.total ?? 0),
+        lowStock: Number(data.lowStockCount ?? adminProductStats.value.lowStock ?? 0),
+        totalValue: Number(data.totalValue ?? adminProductStats.value.totalValue ?? 0),
+      }
+      lastProductStatsAt = Date.now()
+    } catch (e: any) {
+      error.value = e?.message || 'Lỗi tải thống kê sản phẩm'
+      console.error('[shopAdmin] fetchProductStats failed:', e)
+    }
+  }
+
   async function fetchPublicHome(opts: { force?: boolean } = {}) {
     if (!opts.force && loaded.value && Date.now() - lastFetchHomeAt < FRESHNESS_MS) return
     const seq = ++shopLoadSeq
@@ -330,8 +434,8 @@ export const useAdminDataStore = defineStore('adminData', () => {
       ])
       if (seq !== shopLoadSeq) return
       products.value = (pRes.data.data || []).map(hydrateProduct)
-      categories.value = cRes.data.data || []
-      sections.value = sRes.data.data || []
+      categories.value = (cRes.data.data || []).map(hydrateCategory)
+      sections.value = (sRes.data.data || []).map(hydrateSection)
       brands.value = (bRes.data.data || []).map(hydrateBrand)
       loaded.value = true
       lastFetchHomeAt = Date.now()
@@ -377,13 +481,33 @@ export const useAdminDataStore = defineStore('adminData', () => {
   }
 
   function findProduct(id: number) {
-    return products.value.find((p) => p.id === id) || null
+    return productById.value.get(id) || null
   }
 
   // ── Computed ──
   // productCount đọc từ stats BE trước (số tổng thật) rồi mới fallback theo array
   // (sẽ chỉ chính xác khi đã load đủ; với cap 200 thì stats luôn đáng tin hơn).
   const productCount = computed(() => adminProductStats.value.total || products.value.length)
+  const catalogProductCount = computed(() => {
+    if (productCount.value) return productCount.value
+    const roots = categories.value.filter((c) => c.parentId === null)
+    return roots.reduce((sum, c) => sum + (c.productCount ?? 0), 0)
+  })
+  const productById = computed(() => new Map(products.value.map((p) => [p.id, p] as const)))
+  const categoriesById = computed(() => new Map(categories.value.map((c) => [c.id, c] as const)))
+  const categoryChildrenByParent = computed(() => {
+    const map = new Map<number | null, AdminCategory[]>()
+    for (const category of categories.value) {
+      const key = category.parentId ?? null
+      const list = map.get(key)
+      if (list) list.push(category)
+      else map.set(key, [category])
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name))
+    }
+    return map
+  })
   const activeProducts = computed(() => products.value.filter((p) => p.status === 'active'))
   const outOfStock = computed(() => products.value.filter((p) => p.stock === 0))
   const lowStock = computed(() => products.value.filter((p) => p.stock > 0 && p.stock < p.threshold))
@@ -418,18 +542,18 @@ export const useAdminDataStore = defineStore('adminData', () => {
   const derivedSections = computed<ShopSection[]>(() => {
     const cats = categories.value
     if (cats.length === 0 || products.value.length === 0) return []
-    const roots = cats.filter((c) => c.parentId === null && c.active !== false)
+    const roots = (categoryChildrenByParent.value.get(null) || []).filter((c) => c.active !== false)
     if (roots.length === 0) return []
 
     return roots
       .map((root, idx) => {
-        const subCats = cats.filter((c) => c.parentId === root.id)
+        const subCats = categoryChildrenByParent.value.get(root.id) || []
         // Build branch names: root + tất cả con cháu (BFS).
         const branchNames = new Set<string>([root.name, ...subCats.map((c) => c.name)])
         const stack = subCats.map((c) => c.id)
         while (stack.length) {
           const id = stack.pop()!
-          for (const child of cats.filter((c) => c.parentId === id)) {
+          for (const child of categoryChildrenByParent.value.get(id) || []) {
             branchNames.add(child.name)
             stack.push(child.id)
           }
@@ -482,14 +606,14 @@ export const useAdminDataStore = defineStore('adminData', () => {
   // ── Customer-site menu (filtered by active + showOnMenu) ──
   const customerMenu = computed(() => {
     const visible = (c: AdminCategory) => c.active && c.showOnMenu
-    const rootCats = categories.value.filter((c) => c.parentId === null && visible(c))
+    const rootCats = (categoryChildrenByParent.value.get(null) || []).filter(visible)
     return rootCats.map((root) => {
-      const cols = categories.value
-        .filter((c) => c.parentId === root.id && visible(c))
+      const cols = (categoryChildrenByParent.value.get(root.id) || [])
+        .filter(visible)
         .map((col) => ({
           title: col.name,
-          items: categories.value
-            .filter((c) => c.parentId === col.id && visible(c))
+          items: (categoryChildrenByParent.value.get(col.id) || [])
+            .filter(visible)
             .map((c) => c.name),
         }))
       return {
@@ -543,7 +667,7 @@ export const useAdminDataStore = defineStore('adminData', () => {
     try {
       const type = delta > 0 ? 'in' : 'out'
       const res = await shopProductsApi.adjustStock(id, { delta, type, reason })
-      const updated = hydrateProduct(res.data.data)
+      const updated = hydrateProduct(res.data.data?.product ?? res.data.data)
       const idx = products.value.findIndex((p) => p.id === id)
       if (idx >= 0) products.value[idx] = updated
     } catch (e: any) {
@@ -559,7 +683,7 @@ export const useAdminDataStore = defineStore('adminData', () => {
 
     try {
       const res = await shopSectionsApi.create(sectionToPayload({ ...s, productIds: [] }))
-      const created = res.data.data as ShopSection
+      const created = hydrateSection(res.data.data)
       sections.value.push(created)
       return created
     } catch (e: any) {
@@ -591,13 +715,13 @@ export const useAdminDataStore = defineStore('adminData', () => {
 
       if (hasSectionPatch) {
         const res = await shopSectionsApi.update(id, sectionToPayload(merged))
-        updated = res.data.data as ShopSection
+        updated = hydrateSection(res.data.data)
       }
 
       if (hasProductPatch) {
         const targetId = updated?.id || merged.id
         const res = await shopSectionsApi.syncProducts(targetId, merged.productIds)
-        updated = res.data.data as ShopSection
+        updated = hydrateSection(res.data.data)
       }
 
       if (updated) {
@@ -690,8 +814,9 @@ export const useAdminDataStore = defineStore('adminData', () => {
   async function addCategory(c: Omit<AdminCategory, 'id'>): Promise<AdminCategory | null> {
     try {
       const res = await shopCategoriesApi.create(categoryToPayload(c))
-      categories.value.push(res.data.data)
-      return res.data.data
+      const created = hydrateCategory(res.data.data)
+      categories.value.push(created)
+      return created
     } catch (e: any) {
       error.value = e?.response?.data?.message || 'Tạo danh mục thất bại'
       throw e
@@ -703,7 +828,7 @@ export const useAdminDataStore = defineStore('adminData', () => {
       const merged = { ...cur, ...patch }
       const res = await shopCategoriesApi.update(id, categoryToPayload(merged))
       const idx = categories.value.findIndex((c) => c.id === id)
-      if (idx >= 0) categories.value[idx] = res.data.data
+      if (idx >= 0) categories.value[idx] = hydrateCategory(res.data.data)
     } catch (e: any) {
       error.value = e?.response?.data?.message || 'Cập nhật danh mục thất bại'
       throw e
@@ -744,9 +869,7 @@ export const useAdminDataStore = defineStore('adminData', () => {
     const names: string[] = []
     const visit = (cat: AdminCategory) => {
       names.push(cat.name)
-      categories.value
-        .filter((child) => child.parentId === cat.id)
-        .forEach(visit)
+      ;(categoryChildrenByParent.value.get(cat.id) || []).forEach(visit)
     }
     visit(category)
     return names
@@ -761,9 +884,7 @@ export const useAdminDataStore = defineStore('adminData', () => {
 
     const visit = (cat: AdminCategory) => {
       ids.add(cat.id)
-      categories.value
-        .filter((child) => child.parentId === cat.id)
-        .forEach(visit)
+      ;(categoryChildrenByParent.value.get(cat.id) || []).forEach(visit)
     }
     visit(root)
     return ids
@@ -799,12 +920,12 @@ export const useAdminDataStore = defineStore('adminData', () => {
     adminProductMeta, adminProductStats, adminProductBrandFacets,
     categories, brands, sections,
     loading, loaded, error,
-    productCount, activeProducts, outOfStock, lowStock, totalStockValue,
+    productCount, catalogProductCount, activeProducts, outOfStock, lowStock, totalStockValue,
     activeProductCount, outOfStockCount,
-    categoryOptions, brandOptions, warehouseOptions,
+    categoryOptions, brandOptions, warehouseOptions, categoriesById, categoryChildrenByParent, productById,
     hotDeals, suggested, featuredBrands, shopSections, derivedSections, effectiveSections,
     customerMenu,
-    findProduct, fetchAll, fetchCatalogData, fetchAdminProducts, fetchPublicHome, fetchPublicProducts, fetchBrands,
+    findProduct, fetchAll, fetchCatalogData, fetchAdminProducts, fetchProductSnapshot, fetchProductStats, fetchPublicHome, fetchPublicProducts, fetchBrands,
     invalidateCache,
     addProduct, updateProduct, removeProduct, adjustStock,
     addCategory, updateCategory, removeCategory,

@@ -16,10 +16,17 @@ const productsModalOpen = ref(false)
 const productsModalCategory = ref<AdminCategory | null>(null)
 const productsSearch = ref('')
 
-function openProducts(cat: AdminCategory) {
+async function openProducts(cat: AdminCategory) {
   productsModalCategory.value = cat
   productsSearch.value = ''
   productsModalOpen.value = true
+  if (!store.products.length && (cat.productCount ?? 0) > 0) {
+    try {
+      await store.fetchProductSnapshot({ all: 1, limit: 1000 })
+    } catch (e: any) {
+      toast.error('Tải sản phẩm thất bại', e?.response?.data?.message || e?.message)
+    }
+  }
 }
 
 const productsInModal = computed(() => {
@@ -48,9 +55,14 @@ function gotoProducts(catName: string) {
 
 const expanded = ref<Set<number>>(new Set())
 
-// Open all roots by default
-const initialRoots = computed(() => store.categories.filter((c) => c.parentId === null).map((c) => c.id))
-expanded.value = new Set(initialRoots.value)
+const rootCats = computed(() => store.categoryChildrenByParent.get(null) || [])
+
+// Open all roots by default after categories are loaded.
+watch(rootCats, (roots) => {
+  if (expanded.value.size === 0 && roots.length) {
+    expanded.value = new Set(roots.map((c) => c.id))
+  }
+}, { immediate: true })
 
 function toggle(id: number) {
   expanded.value.has(id) ? expanded.value.delete(id) : expanded.value.add(id)
@@ -59,7 +71,9 @@ function toggle(id: number) {
 
 function toggleAll() {
   if (expanded.value.size === 0) {
-    const allParents = store.categories.filter((c) => store.categories.some((x) => x.parentId === c.id)).map((c) => c.id)
+    const allParents = store.categories
+      .filter((c) => (store.categoryChildrenByParent.get(c.id) || []).length > 0)
+      .map((c) => c.id)
     expanded.value = new Set(allParents)
   } else {
     expanded.value = new Set()
@@ -67,10 +81,8 @@ function toggleAll() {
 }
 
 function childrenOf(id: number) {
-  return store.categories.filter((c) => c.parentId === id)
+  return store.categoryChildrenByParent.get(id) || []
 }
-
-const rootCats = computed(() => store.categories.filter((c) => c.parentId === null))
 
 // Pagination cho root categories — danh mục có thể >100 cha gây lag khi render
 // hết 1 trang. Mặc định 20/trang.
@@ -91,7 +103,7 @@ const stats = computed(() => ({
   total: store.categories.length,
   root: rootCats.value.length,
   visible: store.categories.filter((c) => c.active).length,
-  totalProducts: store.products.length,
+  totalProducts: store.catalogProductCount,
 }))
 
 // Side form for adding new category
@@ -110,12 +122,13 @@ watch(() => sideForm.value.name, (n) => {
   prevName.value = n
 })
 
-function submitSide() {
+async function submitSide() {
   if (!sideForm.value.name) {
     toast.error('Thiếu thông tin', 'Tên danh mục là bắt buộc.')
     return
   }
-  const cat = store.addCategory(sideForm.value)
+  const cat = await store.addCategory(sideForm.value)
+  if (!cat) return
   if (cat.parentId !== null) {
     expanded.value.add(cat.parentId)
     expanded.value = new Set(expanded.value)
@@ -144,9 +157,9 @@ function openEdit(c: AdminCategory) {
   editOpen.value = true
 }
 
-function submitEdit() {
+async function submitEdit() {
   if (!editingId.value || !editForm.value.name) return
-  store.updateCategory(editingId.value, {
+  await store.updateCategory(editingId.value, {
     ...editForm.value,
     slug: editForm.value.slug || store.slugify(editForm.value.name),
   })
@@ -160,12 +173,13 @@ function openAddSub(parentId: number) {
   subOpen.value = true
 }
 
-function submitAddSub() {
+async function submitAddSub() {
   if (!editForm.value.name) {
     toast.error('Thiếu thông tin', 'Tên danh mục là bắt buộc.')
     return
   }
-  const cat = store.addCategory(editForm.value)
+  const cat = await store.addCategory(editForm.value)
+  if (!cat) return
   if (cat.parentId !== null) {
     expanded.value.add(cat.parentId)
     expanded.value = new Set(expanded.value)
@@ -182,8 +196,8 @@ function askDelete(c: AdminCategory) {
   confirmCtx.value = {
     title: `Xoá danh mục "${c.name}"?`,
     message: childs > 0 ? `Danh mục này có ${childs} danh mục con. Tất cả sẽ bị xoá theo.` : 'Hành động không thể hoàn tác.',
-    action: () => {
-      const removed = store.removeCategory(c.id)
+    action: async () => {
+      const removed = await store.removeCategory(c.id)
       toast.success('Đã xoá danh mục', `${c.name} (${removed} mục)`)
     },
   }
@@ -191,7 +205,7 @@ function askDelete(c: AdminCategory) {
 }
 
 function productCount(c: AdminCategory) {
-  return store.productsInCategory(c)
+  return c.productCount ?? 0
 }
 </script>
 

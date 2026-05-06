@@ -5,7 +5,7 @@ import AdminModal from '../components/AdminModal.vue'
 import RowMenu from '../components/RowMenu.vue'
 import ShopImportExport from '../components/ShopImportExport.vue'
 import { useToast } from '../composables/useToast'
-import { useAdminDataStore, type ShopSection } from '../stores/adminData'
+import { useAdminDataStore, type AdminProduct, type ShopSection } from '../stores/adminData'
 import { useImportedAs } from '../composables/useImportedAs'
 
 const toast = useToast()
@@ -73,6 +73,24 @@ const stats = computed(() => ({
   totalProducts: allSections.value.reduce((s, x) => s + x.productIds.length, 0),
   empty: allSections.value.filter((s) => s.productIds.length === 0).length,
 }))
+
+const sectionPreviewProducts = computed(() => {
+  const map = new Map<string, AdminProduct[]>()
+  for (const section of allSections.value) {
+    map.set(
+      section.id,
+      section.productIds
+        .slice(0, 8)
+        .map((id) => store.findProduct(id))
+        .filter((p): p is AdminProduct => p !== null),
+    )
+  }
+  return map
+})
+
+function previewProducts(s: ShopSection) {
+  return sectionPreviewProducts.value.get(s.id) || []
+}
 
 function openCreate() {
   editingId.value = null
@@ -145,10 +163,17 @@ async function askDelete(s: ShopSection) {
 }
 
 // Manage products in section
-function openProducts(s: ShopSection) {
+async function openProducts(s: ShopSection) {
   productsModalSection.value = s
   productPickerSearch.value = ''
   productsModalOpen.value = true
+  if (!store.products.length) {
+    try {
+      await store.fetchProductSnapshot({ all: 1, limit: 1000 })
+    } catch (e: any) {
+      toast.error('Tải sản phẩm thất bại', e?.response?.data?.message || e?.message)
+    }
+  }
 }
 function isProductInSection(productId: number) {
   return productsModalSection.value?.productIds.includes(productId)
@@ -298,7 +323,7 @@ function gotoHome() {
           <div v-if="s.productIds.length" class="ym-sec-products">
             <small>Sản phẩm trong section:</small>
             <div class="ym-sec-products__stack">
-              <img v-for="pid in s.productIds.slice(0, 8)" :key="pid" :src="store.findProduct(pid)?.image" :title="store.findProduct(pid)?.name" :alt="store.findProduct(pid)?.name" />
+              <img v-for="p in previewProducts(s)" :key="p.id" :src="p.image" :title="p.name" :alt="p.name" />
               <span v-if="s.productIds.length > 8" class="ym-sec-products__more">+{{ s.productIds.length - 8 }}</span>
             </div>
           </div>

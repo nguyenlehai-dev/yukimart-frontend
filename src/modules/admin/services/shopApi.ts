@@ -82,11 +82,16 @@ export const shopOrdersApi = {
 }
 
 export const shopInventoryApi = {
+  stats: () => api.get('/shop/inventory/stats'),
   history: () => api.get('/shop/inventory/history'),
 }
 
 // Helper to convert frontend AdminProduct → backend payload (camelCase → snake_case)
 export function productToPayload(p: any): Record<string, any> {
+  const salePrice = Number(p.salePrice ?? p.price ?? 0)
+  const originalPrice = Number(p.originalPrice ?? salePrice)
+  const wholesalePrice = Number(p.wholesalePrice ?? salePrice)
+
   return {
     sku: p.sku,
     name: p.name,
@@ -97,10 +102,10 @@ export function productToPayload(p: any): Record<string, any> {
     barcode: p.barcode ?? null,
     brand: p.brand,
     image: p.image,
-    image_urls: p.imageUrls ?? null,
-    original_price: p.originalPrice,
-    sale_price: p.salePrice,
-    wholesale_price: p.wholesalePrice,
+    image_urls: p.imageUrls ?? p.image ?? null,
+    original_price: Number.isFinite(originalPrice) ? originalPrice : salePrice,
+    sale_price: Number.isFinite(salePrice) ? salePrice : 0,
+    wholesale_price: Number.isFinite(wholesalePrice) ? wholesalePrice : salePrice,
     cost: p.cost,
     discount: p.discount,
     stock: p.stock,
@@ -152,6 +157,7 @@ export function sectionToPayload(s: any): Record<string, any> {
     banners: s.banners ?? [],
     sub_tabs: s.subTabs ?? [],
     tags: s.tags ?? [],
+    product_ids: s.productIds ?? [],
     sort_order: s.sortOrder,
   }
 }

@@ -199,11 +199,11 @@ async function submitForm() {
     if (editingId.value) {
       const res = await shopNewsApi.update(editingId.value, payload)
       const idx = posts.value.findIndex((p) => p.id === editingId.value)
-      if (idx >= 0) posts.value[idx] = res.data.data
+      if (idx >= 0) posts.value[idx] = mapNews(res.data.data)
       toast.success('Đã cập nhật bài viết', title)
     } else {
       const res = await shopNewsApi.create(payload)
-      posts.value.unshift(res.data.data)
+      posts.value.unshift(mapNews(res.data.data))
       toast.success('Đã tạo bài viết', title)
     }
     formOpen.value = false
@@ -218,7 +218,7 @@ async function setStatus(post: NewsPost, status: NewsStatus) {
   try {
     const res = await shopNewsApi.updateStatus(post.id, status)
     const idx = posts.value.findIndex((p) => p.id === post.id)
-    if (idx >= 0) posts.value[idx] = res.data.data
+    if (idx >= 0) posts.value[idx] = mapNews(res.data.data)
     toast.success('Đã đổi trạng thái', `${post.title}: ${statusMap[status].label}`)
   } catch (e: any) {
     toast.error('Đổi trạng thái thất bại', e?.response?.data?.message || e?.message)
