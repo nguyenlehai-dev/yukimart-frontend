@@ -6,38 +6,31 @@ import Pagination from '../components/Pagination.vue'
 import ShopImportExport from '../components/ShopImportExport.vue'
 import { useToast } from '../composables/useToast'
 import { useShopBusinessStore, type Shipment, type ShipmentStatus } from '../stores/shopBusiness'
-import { useImportedAs } from '../composables/useImportedAs'
+import { useShopEntity } from '../composables/useShopEntity'
+import { useServerPagedList } from '../composables/useServerPagedList'
+import api from '@/services/api'
 import { formatPrice } from '@/modules/mypage/home/configs'
 
 const toast = useToast()
 const router = useRouter()
 const business = useShopBusinessStore()
+const shipmentsEntity = useShopEntity('shipments')
 
-const imported = useImportedAs<Shipment>('shipments', {
-  trackingCode: ['ma_van_don', 'tracking_code', 'code'],
-  orderId: ['order_id'],
-  orderCode: ['ma_don_hang', 'order_code'],
-  customerName: ['ten_khach_hang', 'khach_hang', 'customer_name'],
-  partner: ['don_vi_van_chuyen', 'partner', 'doi_tac'],
-  partnerCode: ['ma_doi_tac', 'partner_code'],
-  fee: ['phi', 'fee'],
-  cod: ['cod'],
-  status: ['trang_thai', 'status'],
-  updatedAt: ['ngay_cap_nhat', 'updated_at'],
-}, (raw, m) => ({
-  id: Number(raw.id),
-  trackingCode: String(m.trackingCode ?? `VD${raw.id}`),
-  orderId: Number(m.orderId ?? 0),
-  orderCode: String(m.orderCode ?? ''),
-  customerName: String(m.customerName ?? ''),
-  partner: String(m.partner ?? 'GHN'),
-  partnerCode: String(m.partnerCode ?? 'GHN'),
-  fee: Number(m.fee ?? 0),
-  cod: Number(m.cod ?? 0),
-  status: (m.status ?? 'pending') as ShipmentStatus,
-  updatedAt: String(m.updatedAt ?? ''),
-}))
-const allShipments = computed<Shipment[]>(() => imported.hasData.value ? imported.items.value : business.shipments)
+function rowToShipment(raw: any): Shipment {
+  return {
+    id: Number(raw.id),
+    trackingCode: String(raw.tracking_code ?? raw.trackingCode ?? raw.ma_van_don ?? raw.code ?? `VD${raw.id}`),
+    orderId: Number(raw.order_id ?? raw.orderId ?? 0),
+    orderCode: String(raw.order_code ?? raw.orderCode ?? raw.ma_don_hang ?? ''),
+    customerName: String(raw.customer_name ?? raw.customerName ?? raw.ten_khach_hang ?? ''),
+    partner: String(raw.partner ?? raw.don_vi_van_chuyen ?? 'GHN'),
+    partnerCode: String(raw.partner_code ?? raw.partnerCode ?? raw.ma_doi_tac ?? 'GHN'),
+    fee: Number(raw.fee ?? raw.phi ?? 0),
+    cod: Number(raw.cod ?? 0),
+    status: (raw.status ?? raw.trang_thai ?? 'pending') as ShipmentStatus,
+    updatedAt: String(raw.updated_at ?? raw.updatedAt ?? raw.ngay_cap_nhat ?? ''),
+  }
+}
 
 const statusMap: Record<ShipmentStatus, { label: string; tone: string }> = {
   pending: { label: 'Chờ lấy hàng', tone: 'neutral' },
@@ -49,41 +42,53 @@ const statusMap: Record<ShipmentStatus, { label: string; tone: string }> = {
 }
 
 const search = ref(''); const filterStatus = ref<'all' | ShipmentStatus>('all'); const filterPartner = ref('all')
-const page = ref(1); const perPage = ref(5)
-const partnerOptions = computed(() => ['all', ...new Set(allShipments.value.map((i) => i.partner))])
+const page = ref(1); const perPage = ref(20)
 
-const filtered = computed(() => allShipments.value.filter((i) => {
-  const q = search.value.trim().toLowerCase()
-  return (!q || i.trackingCode.toLowerCase().includes(q) || i.orderCode.toLowerCase().includes(q) || i.customerName.toLowerCase().includes(q))
-    && (filterStatus.value === 'all' || i.status === filterStatus.value)
-    && (filterPartner.value === 'all' || i.partner === filterPartner.value)
-}))
-const paginated = computed(() => filtered.value.slice((page.value - 1) * perPage.value, page.value * perPage.value))
+const imported = useServerPagedList<Shipment>('shipments', () => ({
+  page: page.value,
+  perPage: perPage.value,
+  q: search.value.trim(),
+  status: filterStatus.value === 'all' ? '' : filterStatus.value,
+}), { mapper: rowToShipment })
+
+const partnerOptions = computed(() => ['all', ...new Set(imported.items.value.map((i) => i.partner))])
+const paginated = computed(() => filterPartner.value === 'all'
+  ? imported.items.value
+  : imported.items.value.filter((i) => i.partner === filterPartner.value))
+
 watch([search, filterStatus, filterPartner], () => { page.value = 1 })
 
 const stats = computed(() => ({
-  total: allShipments.value.length,
-  shipping: allShipments.value.filter((i) => i.status === 'shipping' || i.status === 'picking').length,
-  delivered: allShipments.value.filter((i) => i.status === 'delivered').length,
-  failed: allShipments.value.filter((i) => i.status === 'failed' || i.status === 'returned').length,
+  total: imported.meta.value.total || imported.items.value.length,
+  shipping: imported.items.value.filter((i) => i.status === 'shipping' || i.status === 'picking').length,
+  delivered: imported.items.value.filter((i) => i.status === 'delivered').length,
+  failed: imported.items.value.filter((i) => i.status === 'failed' || i.status === 'returned').length,
 }))
 
-function syncStatus(s: Shipment) {
-  // Mock đồng bộ trạng thái: chuyển sang trạng thái tiếp theo
+async function syncStatus(s: Shipment) {
   const next: Record<ShipmentStatus, ShipmentStatus> = {
     pending: 'picking', picking: 'shipping', shipping: 'delivered',
     delivered: 'delivered', failed: 'failed', returned: 'returned',
   }
   const old = s.status
-  s.status = next[s.status]
-  s.updatedAt = new Date().toLocaleString('vi-VN')
-  if (old !== s.status) {
-    toast.success('Đã đồng bộ', `${s.trackingCode}: ${old} → ${s.status}`)
-    // Cập nhật trạng thái đơn hàng tương ứng
-    const order = business.getOrder(s.orderId)
-    if (order && s.status === 'delivered' && order.status !== 'completed') {
-      order.status = 'completed'
+  const newStatus = next[s.status]
+  if (old === newStatus) return
+
+  try {
+    await shipmentsEntity.update(s.id, {
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    })
+    // Khi giao thành công → cập nhật order status sang completed (qua BE).
+    if (newStatus === 'delivered' && s.orderId > 0) {
+      try {
+        await api.put(`/shop/orders/${s.orderId}`, { status: 'completed' })
+      } catch { /* observer có thể từ chối transition — bỏ qua */ }
     }
+    await imported.refresh()
+    toast.success('Đã đồng bộ', `${s.trackingCode}: ${old} → ${newStatus}`)
+  } catch (err: any) {
+    toast.error('Đồng bộ thất bại', err?.response?.data?.message || err?.message || 'Lỗi')
   }
 }
 
@@ -111,7 +116,7 @@ function onAction(s: Shipment, key: string) {
 }
 
 function syncAll() {
-  for (const s of allShipments.value) syncStatus(s)
+  for (const s of imported.items.value) syncStatus(s)
   toast.success('Đã đồng bộ tất cả vận đơn')
 }
 </script>
@@ -163,7 +168,7 @@ function syncAll() {
           </tbody>
         </table>
       </div>
-      <Pagination v-model="page" :total-items="filtered.length" :per-page="perPage" item-label="vận đơn" @update:per-page="(n) => perPage = n" />
+      <Pagination v-model="page" :total-items="imported.meta.total" :per-page="perPage" item-label="vận đơn" @update:per-page="(n) => perPage = n" />
     </div>
   </div>
 </template>

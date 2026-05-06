@@ -9,46 +9,67 @@ import { useToast } from '../composables/useToast'
 import { useAdminDataStore } from '../stores/adminData'
 import { useShopBusinessStore, type Order, type OrderStatus, type OrderLine, type Customer, type Payment } from '../stores/shopBusiness'
 import { useImportedAs } from '../composables/useImportedAs'
+import { useShopEntity } from '../composables/useShopEntity'
+import { useServerPagedList } from '../composables/useServerPagedList'
 import { formatPrice } from '@/modules/mypage/home/configs'
+
+const ordersEntity = useShopEntity('orders')
+const invoicesEntity = useShopEntity('invoices')
+const shipmentsEntity = useShopEntity('shipments')
 
 const toast = useToast()
 const router = useRouter()
 const adminData = useAdminDataStore()
 const business = useShopBusinessStore()
 
-const imported = useImportedAs<Order>('orders', {
-  code: ['ma_don_hang', 'ma_don', 'code', 'order_code'],
-  customerId: ['ma_khach_hang', 'customer_id'],
-  customerName: ['ten_khach_hang', 'khach_hang', 'customer_name', 'name'],
-  customerEmail: ['email', 'customer_email'],
-  customerPhone: ['dien_thoai', 'ien_thoai', 'sdt', 'phone'],
-  customerAddress: ['dia_chi', 'ia_chi', 'address'],
-  subtotal: ['tong_phu', 'subtotal'],
-  discount: ['giam_gia', 'discount'],
-  total: ['tong_tien', 'thanh_tien', 'total'],
-  status: ['trang_thai', 'status'],
-  createdAt: ['ngay_tao', 'created_at'],
-  note: ['ghi_chu', 'note'],
-}, (raw, m) => ({
-  id: Number(raw.id),
-  code: String(m.code ?? `#YM${raw.id}`),
-  customerId: Number(m.customerId ?? 0),
-  customerName: String(m.customerName ?? ''),
-  customerEmail: String(m.customerEmail ?? ''),
-  customerPhone: String(m.customerPhone ?? ''),
-  customerAddress: String(m.customerAddress ?? ''),
-  lines: [],
-  subtotal: Number(m.subtotal ?? 0),
-  discount: Number(m.discount ?? 0),
-  total: Number(m.total ?? 0),
-  payment: 'cod' as Payment,
-  status: (m.status ?? 'pending') as OrderStatus,
-  invoiceId: null,
-  shipmentId: null,
-  createdAt: String(m.createdAt ?? ''),
-  note: m.note ? String(m.note) : undefined,
-}))
-const allOrders = computed<Order[]>(() => imported.hasData.value ? imported.items.value : business.orders)
+function formatDateTime(value: any): string {
+  if (!value) return ''
+  const s = String(value)
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    const d = new Date(s)
+    return isNaN(d.getTime()) ? s : d.toLocaleString('vi-VN')
+  }
+  return s
+}
+
+function rowToOrder(raw: any): Order {
+  const c = (raw.customer ?? null) as null | { firstName?: string; lastName?: string; phone?: string; email?: string; address?: string; city?: string; country?: string }
+  const fallbackName = c ? `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() : ''
+  const fallbackAddress = c ? [c.address, c.city, c.country].filter(Boolean).join(', ') : ''
+  const detail = Array.isArray(raw.items_detail ?? raw.lines) ? (raw.items_detail ?? raw.lines) as any[] : []
+  const lines: OrderLine[] = detail.map((d: any) => ({
+    productId: Number(d.id ?? d.productId ?? 0),
+    sku: String(d.sku ?? ''),
+    name: String(d.name ?? ''),
+    image: String(d.image ?? ''),
+    unitPrice: Number(d.price ?? d.unitPrice ?? 0),
+    quantity: Number(d.quantity ?? 1),
+  }))
+  const paymentRaw = String(raw.payment ?? raw.thanh_toan ?? 'cod').toLowerCase()
+  const payment: Payment = (['cod', 'bank', 'momo', 'card'] as Payment[]).includes(paymentRaw as Payment)
+    ? (paymentRaw as Payment)
+    : 'cod'
+
+  return {
+    id: Number(raw.id),
+    code: String(raw.code ?? raw.ma_don_hang ?? raw.ma_don ?? `#YM${raw.id}`),
+    customerId: Number(raw.customer_id ?? raw.user_id ?? raw.ma_khach_hang ?? 0),
+    customerName: String(raw.customer_name ?? raw.ten_khach_hang ?? raw.khach_hang ?? raw.name ?? fallbackName),
+    customerEmail: String(raw.customer_email ?? raw.email ?? c?.email ?? ''),
+    customerPhone: String(raw.customer_phone ?? raw.dien_thoai ?? raw.sdt ?? raw.phone ?? c?.phone ?? ''),
+    customerAddress: String(raw.customer_address ?? raw.dia_chi ?? raw.address ?? fallbackAddress),
+    lines,
+    subtotal: Number(raw.subtotal ?? raw.tong_phu ?? 0),
+    discount: Number(raw.discount ?? raw.giam_gia ?? 0),
+    total: Number(raw.total ?? raw.tong_tien ?? raw.thanh_tien ?? 0),
+    payment,
+    status: (raw.status ?? raw.trang_thai ?? 'pending') as OrderStatus,
+    invoiceId: raw.invoice_id ?? raw.invoiceId ? Number(raw.invoice_id ?? raw.invoiceId) : null,
+    shipmentId: raw.shipment_id ?? raw.shipmentId ? Number(raw.shipment_id ?? raw.shipmentId) : null,
+    createdAt: formatDateTime(raw.created_at ?? raw.createdAt ?? raw.ngay_tao ?? ''),
+    note: raw.note ? String(raw.note) : undefined,
+  }
+}
 
 const statusMap: Record<OrderStatus, { label: string; tone: string }> = {
   pending: { label: 'Chờ xác nhận', tone: 'warning' },
@@ -63,7 +84,15 @@ const filterStatus = ref<'all' | OrderStatus>('all')
 const search = ref('')
 const selected = ref<number[]>([])
 const page = ref(1)
-const perPage = ref(5)
+const perPage = ref(20)
+
+// Server-side pagination + filter status. Đổi tab status hoặc gõ search → refetch.
+const imported = useServerPagedList<Order>('orders', () => ({
+  page: page.value,
+  perPage: perPage.value,
+  q: search.value.trim(),
+  status: filterStatus.value === 'all' ? '' : filterStatus.value,
+}), { mapper: rowToOrder })
 
 const tabs: { key: 'all' | OrderStatus; label: string }[] = [
   { key: 'all', label: 'Tất cả' },
@@ -74,23 +103,15 @@ const tabs: { key: 'all' | OrderStatus; label: string }[] = [
   { key: 'cancelled', label: 'Đã huỷ' },
 ]
 
+// Tab counts: BE chưa có aggregate by status — tính trên page hiện tại + total.
+// Khi user click tab, server-side filter chính xác kết quả.
 const counts = computed(() => {
-  const map: Record<string, number> = { all: allOrders.value.length }
-  for (const o of allOrders.value) map[o.status] = (map[o.status] || 0) + 1
+  const map: Record<string, number> = { all: imported.meta.value.total }
+  for (const o of imported.items.value) map[o.status] = (map[o.status] || 0) + 1
   return map
 })
 
-const filtered = computed(() => allOrders.value.filter((o) => {
-  const matchStatus = filterStatus.value === 'all' || o.status === filterStatus.value
-  const q = search.value.trim().toLowerCase()
-  const matchSearch = !q
-    || o.code.toLowerCase().includes(q)
-    || o.customerName.toLowerCase().includes(q)
-    || o.customerEmail.toLowerCase().includes(q)
-    || o.customerPhone.includes(q)
-  return matchStatus && matchSearch
-}))
-const paginated = computed(() => filtered.value.slice((page.value - 1) * perPage.value, page.value * perPage.value))
+const paginated = computed(() => imported.items.value)
 watch([filterStatus, search], () => { page.value = 1; selected.value = [] })
 
 const allSelected = computed(() => paginated.value.length > 0 && paginated.value.every((o) => selected.value.includes(o.id)))
@@ -184,35 +205,52 @@ function openEdit(order: Order) {
   formOpen.value = true
 }
 
-function submitForm() {
+async function submitForm() {
   if (!form.value.customerName || !form.value.customerEmail || !form.value.customerPhone) {
     toast.error('Thiếu thông tin', 'Tên, email và SĐT là bắt buộc.'); return
   }
   if (!form.value.lines.length) { toast.error('Đơn không có sản phẩm'); return }
 
-  if (editingId.value) {
-    const idx = business.orders.findIndex((o) => o.id === editingId.value)
-    if (idx >= 0) {
-      business.orders[idx] = {
-        ...business.orders[idx], ...form.value,
-        subtotal: formSubtotal.value, discount: formDiscount.value, total: formTotal.value,
-      }
-      toast.success('Đã cập nhật đơn', business.orders[idx].code)
-    }
-  } else {
-    const id = Math.max(0, ...business.orders.map((o) => o.id)) + 1
-    const code = `#YM${2456 + allOrders.value.length + 1}`
-    business.orders.unshift({
-      id, code, ...form.value,
-      subtotal: formSubtotal.value, discount: formDiscount.value, total: formTotal.value,
-      invoiceId: null, shipmentId: null,
-      createdAt: new Date().toLocaleString('vi-VN'),
-    })
-    // Trừ tồn kho
-    for (const l of form.value.lines) adminData.adjustStock(l.productId, -l.quantity).catch(() => {})
-    toast.success('Đã tạo đơn hàng', code)
+  // Gửi cả camelCase lẫn snake_case để admin (đọc snake) + AccountOrders (đọc camel) đều thấy.
+  const payload: Record<string, any> = {
+    customer_name: form.value.customerName,
+    customer_email: form.value.customerEmail,
+    customer_phone: form.value.customerPhone,
+    customer_address: form.value.customerAddress,
+    customer_id: form.value.customerId,
+    payment: form.value.payment,
+    payment_method: form.value.payment === 'bank' ? 'Chuyển khoản ngân hàng'
+      : form.value.payment === 'cod' ? 'Trả tiền mặt khi nhận hàng'
+      : form.value.payment,
+    status: form.value.status,
+    note: form.value.note ?? '',
+    items: form.value.lines.reduce((s, l) => s + l.quantity, 0),
+    items_detail: form.value.lines.map((l) => ({
+      id: l.productId, name: l.name, image: l.image,
+      price: l.unitPrice, quantity: l.quantity, sku: l.sku,
+    })),
+    subtotal: formSubtotal.value,
+    discount: formDiscount.value,
+    total: formTotal.value,
   }
-  formOpen.value = false
+
+  try {
+    if (editingId.value) {
+      await ordersEntity.update(editingId.value, payload)
+      await imported.refresh()
+      toast.success('Đã cập nhật đơn')
+    } else {
+      const code = `YM-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`
+      await ordersEntity.create({ ...payload, code, created_at: new Date().toISOString() })
+      await imported.refresh()
+      // Trừ tồn kho local (BE chưa gắn pipeline trừ kho).
+      for (const l of form.value.lines) adminData.adjustStock(l.productId, -l.quantity).catch(() => {})
+      toast.success('Đã tạo đơn hàng', code)
+    }
+    formOpen.value = false
+  } catch (err: any) {
+    toast.error('Lưu đơn thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
+  }
 }
 
 function openDetail(order: Order) { detail.value = order; detailOpen.value = true }
@@ -220,24 +258,62 @@ function openDetail(order: Order) { detail.value = order; detailOpen.value = tru
 function openStatus(order: Order) {
   statusTarget.value = order; newStatus.value = order.status; statusOpen.value = true
 }
-function submitStatus() {
+async function submitStatus() {
   if (!statusTarget.value) return
-  const idx = business.orders.findIndex((o) => o.id === statusTarget.value!.id)
-  if (idx >= 0) {
-    business.orders[idx].status = newStatus.value
-    toast.success('Đã cập nhật trạng thái', `${business.orders[idx].code} → ${statusMap[newStatus.value].label}`)
+  const target = statusTarget.value
+  try {
+    await ordersEntity.update(target.id, { status: newStatus.value })
+    await imported.refresh()
+    toast.success('Đã cập nhật trạng thái', `${target.code} → ${statusMap[newStatus.value].label}`)
+  } catch (err: any) {
+    toast.error('Cập nhật thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
   }
   statusOpen.value = false
 }
 
-function createInvoice(order: Order) {
+async function createInvoice(order: Order) {
   if (order.invoiceId) {
-    toast.info('Đã có hoá đơn', `Đơn này đã sinh hoá đơn`)
+    toast.info('Đã có hoá đơn', 'Đơn này đã sinh hoá đơn')
     return
   }
-  const inv = business.createInvoiceFromOrder(order.id)
-  if (inv) {
-    toast.success('Đã tạo hoá đơn', inv.code)
+  const subt = Math.round(order.total / 1.1)
+  const vat = order.total - subt
+  const stamp = new Date().toISOString().slice(2, 10).replace(/-/g, '')
+  const code = `HD-${stamp}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`
+
+  const invoicePayload: Record<string, any> = {
+    code,
+    order_id: order.id,
+    order_code: order.code,
+    customer_id: order.customerId,
+    user_id: order.customerId, // để AccountInvoices tab của user thấy
+    customer_name: order.customerName,
+    customer_email: order.customerEmail,
+    customer_phone: order.customerPhone,
+    item_count: order.lines.reduce((a, l) => a + l.quantity, 0),
+    subtotal: subt,
+    vat,
+    total: order.total,
+    paid: 0,
+    status: 'unpaid',
+    company: 'YukiMart Viet Nam',
+    items_detail: order.lines.map((l) => ({
+      id: l.productId, name: l.name, image: l.image,
+      price: l.unitPrice, quantity: l.quantity, sku: l.sku,
+    })),
+    created_at: new Date().toISOString(),
+  }
+
+  try {
+    const created = await invoicesEntity.create(invoicePayload)
+    const newInvoiceId = Number((created as any)?.id ?? 0)
+    if (newInvoiceId) {
+      await ordersEntity.update(order.id, { invoice_id: newInvoiceId, invoiceId: newInvoiceId })
+      await imported.refresh()
+    }
+    toast.success('Đã tạo hoá đơn', code)
+  } catch (err: any) {
+    toast.error('Tạo hoá đơn thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
   }
 }
 
@@ -250,12 +326,43 @@ function openShipment(order: Order) {
   shipmentDialog.value = true
 }
 
-function submitShipment() {
+async function submitShipment() {
   if (!shipmentTarget.value) return
-  const ship = business.createShipmentFromOrder(shipmentTarget.value.id, shipmentPartner.value.name, shipmentPartner.value.code, shipmentPartner.value.fee)
-  if (ship) {
-    toast.success('Đã tạo vận đơn', ship.trackingCode)
+  const order = shipmentTarget.value
+  const trackingCode = `${shipmentPartner.value.code}${String(Date.now()).slice(-10)}`
+  const cod = order.payment === 'cod' ? order.total : 0
+
+  const payload: Record<string, any> = {
+    tracking_code: trackingCode,
+    order_id: order.id,
+    order_code: order.code,
+    user_id: order.customerId,
+    customer_name: order.customerName,
+    customer_phone: order.customerPhone,
+    customer_address: order.customerAddress,
+    partner: shipmentPartner.value.name,
+    partner_code: shipmentPartner.value.code,
+    fee: shipmentPartner.value.fee,
+    cod,
+    status: 'shipping',
+    created_at: new Date().toISOString(),
+  }
+
+  try {
+    const created = await shipmentsEntity.create(payload)
+    const newShipmentId = Number((created as any)?.id ?? 0)
+    if (newShipmentId) {
+      await ordersEntity.update(order.id, {
+        shipment_id: newShipmentId,
+        shipmentId: newShipmentId,
+        status: 'shipping',
+      })
+      await imported.refresh()
+    }
+    toast.success('Đã tạo vận đơn', trackingCode)
     shipmentDialog.value = false
+  } catch (err: any) {
+    toast.error('Tạo vận đơn thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
   }
 }
 
@@ -264,10 +371,15 @@ function askDelete(order: Order) {
     title: `Xoá đơn ${order.code}?`,
     message: 'Đơn hàng sẽ bị xoá vĩnh viễn.',
     tone: 'danger',
-    action: () => {
-      business.orders.splice(business.orders.findIndex((o) => o.id === order.id), 1)
-      selected.value = selected.value.filter((id) => id !== order.id)
-      toast.success('Đã xoá đơn', order.code)
+    action: async () => {
+      try {
+        await ordersEntity.remove(order.id)
+        await imported.refresh()
+        selected.value = selected.value.filter((id) => id !== order.id)
+        toast.success('Đã xoá đơn', order.code)
+      } catch (err: any) {
+        toast.error('Xoá thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
+      }
     },
   }
   confirmOpen.value = true
@@ -278,28 +390,32 @@ function askCancel(order: Order) {
     title: `Huỷ đơn ${order.code}?`,
     message: 'Đơn sẽ chuyển sang "Đã huỷ" và hoàn lại tồn kho.',
     tone: 'danger',
-    action: () => {
-      const idx = business.orders.findIndex((o) => o.id === order.id)
-      if (idx >= 0) {
-        const o = business.orders[idx]
-        if (o.status !== 'cancelled') {
-          for (const l of o.lines) adminData.adjustStock(l.productId, l.quantity).catch(() => {})
+    action: async () => {
+      try {
+        await ordersEntity.update(order.id, { status: 'cancelled' })
+        await imported.refresh()
+        if (order.status !== 'cancelled') {
+          for (const l of order.lines) adminData.adjustStock(l.productId, l.quantity).catch(() => {})
         }
-        o.status = 'cancelled'
+        toast.success('Đã huỷ đơn', order.code)
+      } catch (err: any) {
+        toast.error('Huỷ thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
       }
-      toast.success('Đã huỷ đơn', order.code)
     },
   }
   confirmOpen.value = true
 }
 
-function bulkUpdateStatus(newSt: OrderStatus) {
-  for (const id of selected.value) {
-    const idx = business.orders.findIndex((o) => o.id === id)
-    if (idx >= 0) business.orders[idx].status = newSt
+async function bulkUpdateStatus(newSt: OrderStatus) {
+  const ids = [...selected.value]
+  try {
+    await Promise.all(ids.map((id) => ordersEntity.update(id, { status: newSt })))
+    await imported.refresh()
+    toast.success(`Cập nhật ${ids.length} đơn`, `→ ${statusMap[newSt].label}`)
+    selected.value = []
+  } catch (err: any) {
+    toast.error('Cập nhật thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
   }
-  toast.success(`Cập nhật ${selected.value.length} đơn`, `→ ${statusMap[newSt].label}`)
-  selected.value = []
 }
 
 function onRowAction(order: Order, key: string) {
@@ -432,7 +548,7 @@ function gotoShipment(orderId: number) {
         </table>
       </div>
 
-      <Pagination v-model="page" :total-items="filtered.length" :per-page="perPage" item-label="đơn hàng" @update:per-page="(n) => perPage = n" />
+      <Pagination v-model="page" :total-items="imported.meta.total" :per-page="perPage" item-label="đơn hàng" @update:per-page="(n) => perPage = n" />
     </div>
 
     <!-- Form modal -->

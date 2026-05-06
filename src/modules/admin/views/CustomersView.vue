@@ -7,7 +7,12 @@ import ShopImportExport from '../components/ShopImportExport.vue'
 import { useToast } from '../composables/useToast'
 import { useShopBusinessStore, type Customer, type CustomerGroup } from '../stores/shopBusiness'
 import { useImportedAs } from '../composables/useImportedAs'
+import { useShopEntity } from '../composables/useShopEntity'
+import { useServerPagedList } from '../composables/useServerPagedList'
+import api from '@/services/api'
 import { formatPrice } from '@/modules/mypage/home/configs'
+
+const customersEntity = useShopEntity('customers')
 
 const toast = useToast()
 const business = useShopBusinessStore()
@@ -50,57 +55,45 @@ function findGroup(idOrName: number | string | undefined): CustomerGroup | undef
     || list.find((g) => g.name?.toLowerCase() === s)
 }
 
-// Map data đã import (entity = 'customers') → Customer shape.
-const imported = useImportedAs<Customer>('customers', {
-  name: ['ten_khach_hang', 'ten_kh', 'ten', 'name', 'full_name'],
-  email: ['email', 'mail'],
-  phone: ['dien_thoai', 'ien_thoai', 'sdt', 'phone'],
-  groupId: ['nhom', 'nhom_khach_hang', 'loai_khach', 'loai_khach_hang', 'group_id', 'group'],
-  ordersCount: ['so_don', 'orders_count'],
-  totalSpent: ['tong_chi_tieu', 'tong_mua', 'total_spent'],
-  joinedAt: ['ngay_tao', 'ngay_tham_gia', 'joined_at', 'created_at'],
-  active: ['trang_thai', 'active'],
-  note: ['ghi_chu', 'note'],
-}, (raw, m) => {
-  // Nếu groupId là text (vd "VIP"), tra cứu trong imported groups → numeric id.
-  // Nếu không tìm thấy, default về 3 (Khách lẻ).
-  const groupRef = findGroup(m.groupId as any)
-  const resolvedGroupId = groupRef?.id ?? (typeof m.groupId === 'number' ? m.groupId : 3)
-  return {
-    id: Number(raw.id),
-    name: String(m.name ?? '(Không tên)'),
-    email: String(m.email ?? ''),
-    phone: String(m.phone ?? ''),
-    groupId: resolvedGroupId,
-    ordersCount: Number(m.ordersCount ?? 0),
-    totalSpent: Number(m.totalSpent ?? 0),
-    joinedAt: String(m.joinedAt ?? ''),
-    active: m.active === undefined ? true : (m.active === 1 || m.active === '1' || m.active === true || String(m.active).toLowerCase() === 'active'),
-    initial: String(m.name ?? '?').trim().charAt(0).toUpperCase() || '?',
-    avatarTone: 'blue' as any,
-    note: m.note ? String(m.note) : undefined,
-  }
-})
-
-const allCustomers = computed<Customer[]>(() =>
-  imported.hasData.value ? imported.items.value : business.customers,
-)
-
+// Server-side pagination + search. Mỗi lần đổi page/search refetch đúng 1 request.
 const filterGroupId = ref<'all' | number>('all')
 const search = ref('')
 const page = ref(1)
-const perPage = ref(5)
+const perPage = ref(20)
 
-const filtered = computed(() => allCustomers.value.filter((c) => {
-  const matchGroup = filterGroupId.value === 'all' || c.groupId === filterGroupId.value
-  const q = search.value.trim().toLowerCase()
-  const matchSearch = !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.includes(q)
-  return matchGroup && matchSearch
-}))
-const paginated = computed(() => filtered.value.slice((page.value - 1) * perPage.value, page.value * perPage.value))
+function rowToCustomer(raw: any): Customer {
+  const groupRef = findGroup(raw.group_id ?? raw.groupId ?? raw.nhom)
+  const resolvedGroupId = groupRef?.id
+    ?? (typeof (raw.group_id ?? raw.groupId) === 'number' ? Number(raw.group_id ?? raw.groupId) : 3)
+  const name = String(raw.name ?? raw.ten_khach_hang ?? raw.ten ?? raw.full_name ?? '(Không tên)')
+  return {
+    id: Number(raw.id),
+    name,
+    email: String(raw.email ?? raw.mail ?? ''),
+    phone: String(raw.phone ?? raw.dien_thoai ?? raw.sdt ?? ''),
+    groupId: resolvedGroupId,
+    ordersCount: Number(raw.orders_count ?? raw.so_don ?? 0),
+    totalSpent: Number(raw.total_spent ?? raw.tong_chi_tieu ?? 0),
+    joinedAt: String(raw.joined_at ?? raw.ngay_tao ?? raw.created_at ?? raw.createdAt ?? ''),
+    active: raw.active === undefined ? true : Boolean(raw.active),
+    initial: name.trim().charAt(0).toUpperCase() || '?',
+    avatarTone: 'blue' as any,
+    note: raw.note ? String(raw.note) : undefined,
+  }
+}
+
+const imported = useServerPagedList<Customer>('customers', () => ({
+  page: page.value,
+  perPage: perPage.value,
+  q: search.value.trim(),
+  // BE filter group_id chính xác (không bị giới hạn theo page hiện tại).
+  group_id: filterGroupId.value === 'all' ? '' : filterGroupId.value,
+}), { mapper: rowToCustomer })
+
+const paginated = computed(() => imported.items.value)
+
 watch([filterGroupId, search], () => { page.value = 1 })
 
-// Stats nhận diện VIP/Sỉ qua tên/code thay vì hardcode id (data import thường có id khác).
 function isGroupCode(c: Customer, codes: string[]): boolean {
   const g = findGroup(c.groupId)
   if (!g) return false
@@ -109,10 +102,11 @@ function isGroupCode(c: Customer, codes: string[]): boolean {
   return codes.some((k) => code === k.toLowerCase() || name.includes(k.toLowerCase()))
 }
 const stats = computed(() => ({
-  total: allCustomers.value.length,
-  vip: allCustomers.value.filter((c) => isGroupCode(c, ['VIP', 'vip'])).length,
-  wholesale: allCustomers.value.filter((c) => isGroupCode(c, ['WHOLESALE', 'sỉ', 'si'])).length,
-  newThisMonth: allCustomers.value.filter((c) => c.joinedAt.endsWith('/2026')).length,
+  total: imported.meta.value.total || imported.items.value.length,
+  // VIP/Sỉ tính trên page hiện tại — chấp nhận xấp xỉ; full count cần BE aggregate.
+  vip: imported.items.value.filter((c) => isGroupCode(c, ['VIP', 'vip'])).length,
+  wholesale: imported.items.value.filter((c) => isGroupCode(c, ['WHOLESALE', 'sỉ', 'si'])).length,
+  newThisMonth: imported.items.value.filter((c) => c.joinedAt.endsWith('/2026')).length,
 }))
 
 // Modals
@@ -140,29 +134,78 @@ function openEdit(c: Customer) {
   formOpen.value = true
 }
 
-function submitForm() {
+async function submitForm() {
   if (!form.value.name || !form.value.email || !form.value.phone) {
     toast.error('Thiếu thông tin', 'Tên, email và SĐT là bắt buộc.')
     return
   }
-  if (editingId.value) {
-    business.updateCustomer(editingId.value, form.value)
-    toast.success('Đã cập nhật khách hàng', form.value.name)
-  } else {
-    business.addCustomer(form.value)
-    toast.success('Đã thêm khách hàng', form.value.name)
+  const payload: Record<string, any> = {
+    name: form.value.name,
+    email: form.value.email,
+    phone: form.value.phone,
+    group_id: form.value.groupId,
+    note: form.value.note ?? '',
+    active: form.value.active,
   }
-  formOpen.value = false
+  try {
+    if (editingId.value) {
+      await customersEntity.update(editingId.value, payload)
+      toast.success('Đã cập nhật khách hàng', form.value.name)
+    } else {
+      await customersEntity.create({
+        ...payload,
+        joined_at: new Date().toLocaleDateString('vi-VN'),
+        orders_count: 0,
+        total_spent: 0,
+      })
+      toast.success('Đã thêm khách hàng', form.value.name)
+    }
+    await imported.refresh()
+    formOpen.value = false
+  } catch (err: any) {
+    toast.error('Lưu thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
+  }
 }
 
-function openDetail(c: Customer) {
+// Đơn của customer được fetch riêng khi mở detail — tránh load cho cả list.
+const detailOrders = ref<Array<{ id: number; code: string; createdAt: string; status: string; total: number }>>([])
+const detailOrdersLoading = ref(false)
+
+async function openDetail(c: Customer) {
   detail.value = c
   detailOpen.value = true
+  detailOrders.value = []
+  detailOrdersLoading.value = true
+  try {
+    // BE-side filter user_id (gắn vào order khi customer đặt qua FE checkout).
+    const res = await api.get('/shop/orders', {
+      params: { user_id: c.id, per_page: 10, page: 1 },
+    })
+    const items: any[] = res.data?.data ?? []
+    detailOrders.value = items.map((raw) => ({
+      id: Number(raw.id),
+      code: String(raw.code ?? `#YM${raw.id}`),
+      createdAt: String(raw.created_at ?? raw.createdAt ?? ''),
+      status: String(raw.status ?? ''),
+      total: Number(raw.total ?? 0),
+    }))
+  } catch {
+    detailOrders.value = []
+  } finally {
+    detailOrdersLoading.value = false
+  }
 }
 
-function toggleActive(c: Customer) {
-  business.updateCustomer(c.id, { active: !c.active })
-  toast.info(c.active ? 'Đã tạm khoá' : 'Đã kích hoạt', c.name)
+async function toggleActive(c: Customer) {
+  const next = !c.active
+  try {
+    // Endpoint riêng: cập nhật ShopEntry + sync users.status + revoke token nếu khoá.
+    await api.post(`/admin/customers/${c.id}/active`, { active: next })
+    await imported.refresh()
+    toast.info(next ? 'Đã kích hoạt' : 'Đã tạm khoá tài khoản', c.name)
+  } catch (err: any) {
+    toast.error('Thao tác thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
+  }
 }
 
 function askDelete(c: Customer) {
@@ -170,9 +213,14 @@ function askDelete(c: Customer) {
     title: `Xoá khách hàng "${c.name}"?`,
     message: 'Tài khoản và lịch sử mua hàng sẽ bị xoá. Hành động không thể hoàn tác.',
     tone: 'danger',
-    action: () => {
-      business.removeCustomer(c.id)
-      toast.success('Đã xoá khách hàng', c.name)
+    action: async () => {
+      try {
+        await customersEntity.remove(c.id)
+        await imported.refresh()
+        toast.success('Đã xoá khách hàng', c.name)
+      } catch (err: any) {
+        toast.error('Xoá thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
+      }
     },
   }
   confirmOpen.value = true
@@ -283,14 +331,14 @@ function groupTone(groupId: number): string {
                 <RowMenu :items="rowItems(c)" @select="onRowAction(c, $event)" />
               </td>
             </tr>
-            <tr v-if="!filtered.length"><td colspan="8" class="ym-empty">Không có khách hàng nào.</td></tr>
+            <tr v-if="!paginated.length"><td colspan="8" class="ym-empty">{{ imported.loading ? 'Đang tải...' : 'Không có khách hàng nào.' }}</td></tr>
           </tbody>
         </table>
       </div>
 
       <Pagination
         v-model="page"
-        :total-items="filtered.length"
+        :total-items="imported.meta.total"
         :per-page="perPage"
         item-label="khách hàng"
         @update:per-page="(n) => perPage = n"
@@ -339,15 +387,16 @@ function groupTone(groupId: number): string {
       </div>
 
       <div class="ym-detail-orders">
-        <h4>Đơn hàng gần đây ({{ business.ordersOfCustomer(detail.id).length }})</h4>
-        <ul v-if="business.ordersOfCustomer(detail.id).length" class="ym-mini-list">
-          <li v-for="o in business.ordersOfCustomer(detail.id).slice(0, 5)" :key="o.id">
+        <h4>Đơn hàng gần đây ({{ detailOrdersLoading ? '...' : detailOrders.length }})</h4>
+        <ul v-if="detailOrders.length" class="ym-mini-list">
+          <li v-for="o in detailOrders" :key="o.id">
             <strong>{{ o.code }}</strong>
             <span class="is-muted">{{ o.createdAt }}</span>
             <span :class="['ym-tag', 'ym-tag--' + (o.status === 'completed' ? 'success' : o.status === 'cancelled' ? 'danger' : 'info')]">{{ o.status }}</span>
             <strong style="margin-left: auto">{{ formatPrice(o.total) }}</strong>
           </li>
         </ul>
+        <p v-else-if="detailOrdersLoading" style="color: #9ca3af; font-size: 13px; margin: 8px 0">Đang tải đơn hàng...</p>
         <p v-else style="color: #9ca3af; font-size: 13px; margin: 8px 0">Khách chưa có đơn hàng nào.</p>
       </div>
 

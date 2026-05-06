@@ -8,7 +8,11 @@ import ShopImportExport from '../components/ShopImportExport.vue'
 import { useToast } from '../composables/useToast'
 import { useShopBusinessStore, type Invoice, type InvoiceStatus } from '../stores/shopBusiness'
 import { useImportedAs } from '../composables/useImportedAs'
+import { useShopEntity } from '../composables/useShopEntity'
 import { formatPrice } from '@/modules/mypage/home/configs'
+
+const invoicesEntity = useShopEntity('invoices')
+const salesReturnsEntity = useShopEntity('sales-returns')
 
 const toast = useToast()
 const router = useRouter()
@@ -42,7 +46,7 @@ const imported = useImportedAs<Invoice>('invoices', {
   paid: Number(m.paid ?? 0),
   createdAt: String(m.createdAt ?? ''),
 }))
-const allInvoices = computed<Invoice[]>(() => imported.hasData.value ? imported.items.value : business.invoices)
+const allInvoices = computed<Invoice[]>(() => imported.ready.value ? imported.items.value : [])
 
 const statusMap: Record<InvoiceStatus, { label: string; tone: string }> = {
   unpaid: { label: 'Chưa thanh toán', tone: 'warning' },
@@ -72,11 +76,18 @@ const detailOpen = ref(false)
 const detail = ref<Invoice | null>(null)
 function openDetail(inv: Invoice) { detail.value = inv; detailOpen.value = true }
 
-// Mark as paid
-function markPaid(inv: Invoice) {
-  inv.status = 'paid'
-  inv.paid = inv.total
-  toast.success('Đã ghi nhận thanh toán', inv.code)
+// Mark as paid — wire BE: cập nhật data->status + data->paid trong shop_entries.
+async function markPaid(inv: Invoice) {
+  try {
+    await invoicesEntity.update(inv.id, {
+      status: 'paid',
+      paid: inv.total,
+    })
+    await imported.refresh({ force: true })
+    toast.success('Đã ghi nhận thanh toán', inv.code)
+  } catch (err: any) {
+    toast.error('Cập nhật thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
+  }
 }
 
 // Create return from invoice
@@ -96,17 +107,36 @@ function openReturn(inv: Invoice) {
   returnLines.value = order.lines.map((l) => ({ ...l, checked: false }))
   returnDialog.value = true
 }
-function submitReturn() {
+async function submitReturn() {
   if (!returnTarget.value) return
+  const inv = returnTarget.value
   const lines = returnLines.value.filter((l) => l.checked && l.quantity > 0).map(({ productId, sku, name, image, unitPrice, quantity }) => ({ productId, sku, name, image, unitPrice, quantity }))
   if (!lines.length) {
     toast.error('Chọn ít nhất 1 sản phẩm trả')
     return
   }
-  const sr = business.createReturnFromInvoice(returnTarget.value.id, lines, returnReason.value || 'Khách trả')
-  if (sr) {
-    toast.success('Đã tạo phiếu trả', sr.code)
+  const total = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0)
+  const code = `TR-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+
+  try {
+    await salesReturnsEntity.create({
+      code,
+      invoice_id: inv.id,
+      invoice_code: inv.code,
+      order_code: inv.orderCode,
+      customer_id: inv.customerId,
+      customer_name: inv.customerName,
+      lines,
+      total,
+      refunded: 0,
+      reason: returnReason.value || 'Khách trả',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    })
+    toast.success('Đã tạo phiếu trả', code)
     returnDialog.value = false
+  } catch (err: any) {
+    toast.error('Tạo phiếu trả thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
   }
 }
 

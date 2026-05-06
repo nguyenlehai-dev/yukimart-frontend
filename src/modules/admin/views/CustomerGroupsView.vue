@@ -4,12 +4,40 @@ import AdminModal from '../components/AdminModal.vue'
 import RowMenu from '../components/RowMenu.vue'
 import ShopImportExport from '../components/ShopImportExport.vue'
 import { useToast } from '../composables/useToast'
-import { useShopBusinessStore, type CustomerGroup, type PriceList } from '../stores/shopBusiness'
+import { useShopBusinessStore, type CustomerGroup, type Customer, type PriceList } from '../stores/shopBusiness'
 import { useImportedAs } from '../composables/useImportedAs'
+import { useShopEntity } from '../composables/useShopEntity'
 import { formatPrice } from '@/modules/mypage/home/configs'
 
 const toast = useToast()
 const business = useShopBusinessStore()
+const groupsEntity = useShopEntity('customer-groups')
+
+// Khách hàng thật (BE) — dùng để đếm thành viên + stats nhóm.
+const importedCustomers = useImportedAs<Customer>('customers', {
+  name: ['ten_khach_hang', 'ten_kh', 'ten', 'name', 'full_name'],
+  email: ['email', 'mail'],
+  phone: ['dien_thoai', 'ien_thoai', 'sdt', 'phone'],
+  groupId: ['nhom', 'nhom_khach_hang', 'loai_khach', 'loai_khach_hang', 'group_id', 'group'],
+  ordersCount: ['so_don', 'orders_count'],
+  totalSpent: ['tong_chi_tieu', 'tong_mua', 'total_spent'],
+  joinedAt: ['ngay_tao', 'ngay_tham_gia', 'joined_at', 'created_at'],
+}, (raw, m) => ({
+  id: Number(raw.id),
+  name: String(m.name ?? '(Không tên)'),
+  email: String(m.email ?? ''),
+  phone: String(m.phone ?? ''),
+  groupId: typeof m.groupId === 'number' ? m.groupId : Number(m.groupId ?? 3) || 3,
+  ordersCount: Number(m.ordersCount ?? 0),
+  totalSpent: Number(m.totalSpent ?? 0),
+  joinedAt: String(m.joinedAt ?? ''),
+  active: true,
+  initial: String(m.name ?? '?').trim().charAt(0).toUpperCase() || '?',
+  avatarTone: 'blue' as any,
+}))
+const allCustomers = computed<Customer[]>(() =>
+  importedCustomers.ready.value ? importedCustomers.items.value : [],
+)
 
 // Imported price-lists để tra cứu priceListId theo code/name khi customer-groups
 // import có cột "Bảng giá" dạng text (vd "BG-VIP", "Giá VIP").
@@ -81,25 +109,55 @@ function openEdit(g: CustomerGroup) {
   form.value = { code: g.code, name: g.name, description: g.description, minSpent: g.minSpent, discount: g.discount, color: g.color, active: g.active, priceListId: g.priceListId }
   formOpen.value = true
 }
-function submit() {
+async function submit() {
   if (!form.value.name || !form.value.code) return toast.error('Thiếu mã hoặc tên nhóm')
-  if (editingId.value) {
-    const idx = business.customerGroups.findIndex((g) => g.id === editingId.value)
-    if (idx >= 0) business.customerGroups[idx] = { ...business.customerGroups[idx], ...form.value }
-    toast.success('Đã cập nhật', form.value.name)
-  } else {
-    const id = Math.max(0, ...business.customerGroups.map((g) => g.id)) + 1
-    business.customerGroups.unshift({ id, ...form.value })
-    toast.success('Đã thêm', form.value.name)
+  const payload: Record<string, any> = {
+    code: form.value.code,
+    name: form.value.name,
+    description: form.value.description,
+    min_spent: form.value.minSpent,
+    discount: form.value.discount,
+    color: form.value.color,
+    active: form.value.active,
+    price_list_id: form.value.priceListId,
   }
-  formOpen.value = false
+  try {
+    if (editingId.value) {
+      await groupsEntity.update(editingId.value, payload)
+      toast.success('Đã cập nhật', form.value.name)
+    } else {
+      await groupsEntity.create(payload)
+      toast.success('Đã thêm', form.value.name)
+    }
+    await imported.refresh({ force: true })
+    formOpen.value = false
+  } catch (err: any) {
+    toast.error('Lưu thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
+  }
 }
+// Confirm dialog state — thay browser confirm() bằng AdminModal đẹp hơn.
+const confirmOpen = ref(false)
+const confirmCtx = ref<{ title: string; message: string; tone: 'danger' | 'primary'; action: () => void } | null>(null)
+
 function remove(g: CustomerGroup) {
-  if (business.customersInGroup(g.id).length > 0) {
-    if (!confirm(`Nhóm "${g.name}" có ${business.customersInGroup(g.id).length} khách. Xoá nhóm sẽ không xoá khách. Tiếp tục?`)) return
-  } else if (!confirm(`Xoá nhóm "${g.name}"?`)) return
-  business.customerGroups.splice(business.customerGroups.findIndex((x) => x.id === g.id), 1)
-  toast.success('Đã xoá', g.code)
+  const memberCount = memberCountOf(g)
+  confirmCtx.value = {
+    title: `Xoá nhóm "${g.name}"?`,
+    message: memberCount > 0
+      ? `Nhóm này đang có ${memberCount} khách. Xoá nhóm sẽ không xoá khách nhưng họ sẽ mất nhóm này.`
+      : 'Hành động không thể hoàn tác.',
+    tone: 'danger',
+    action: async () => {
+      try {
+        await groupsEntity.remove(g.id)
+        await imported.refresh({ force: true })
+        toast.success('Đã xoá', g.code)
+      } catch (err: any) {
+        toast.error('Xoá thất bại', err?.response?.data?.message || err?.message || 'Lỗi không xác định')
+      }
+    },
+  }
+  confirmOpen.value = true
 }
 function onAction(g: CustomerGroup, key: string) {
   if (key === 'edit') openEdit(g)
@@ -127,20 +185,26 @@ function openMembers(g: CustomerGroup) {
 
 const groupMembers = computed(() => {
   if (!membersGroup.value) return []
-  const list = business.customersInGroup(membersGroup.value.id)
+  const gid = membersGroup.value.id
+  const list = allCustomers.value.filter((c) => c.groupId === gid)
   const q = membersSearch.value.trim().toLowerCase()
   if (!q) return list
   return list.filter((m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q) || m.phone.includes(q))
 })
 
-const stats = computed(() => ({
-  total: allGroups.value.length,
-  active: allGroups.value.filter((g) => g.active).length,
-  totalCustomers: business.customers.length,
-  vipCount: business.customers.filter((c) => business.getCustomerGroup(c.groupId)?.code === 'VIP').length,
-}))
+const stats = computed(() => {
+  const vipGroup = allGroups.value.find((g) => (g.code || '').toUpperCase() === 'VIP')
+  return {
+    total: allGroups.value.length,
+    active: allGroups.value.filter((g) => g.active).length,
+    totalCustomers: allCustomers.value.length,
+    vipCount: vipGroup ? allCustomers.value.filter((c) => c.groupId === vipGroup.id).length : 0,
+  }
+})
 
-function memberCountOf(g: CustomerGroup) { return business.customersInGroup(g.id).length }
+function memberCountOf(g: CustomerGroup) {
+  return allCustomers.value.filter((c) => c.groupId === g.id).length
+}
 </script>
 
 <template>
@@ -242,6 +306,10 @@ function memberCountOf(g: CustomerGroup) { return business.customersInGroup(g.id
         <RouterLink to="/admin/customers" class="ym-btn"><i class="ri-external-link-line"></i> Quản lý khách hàng</RouterLink>
         <button type="button" class="ym-btn ym-btn--primary" @click="membersOpen = false">Đóng</button>
       </div>
+    </AdminModal>
+
+    <AdminModal v-if="confirmCtx" v-model:open="confirmOpen" :title="confirmCtx.title" size="sm" :confirm-tone="confirmCtx.tone" :confirm-text="confirmCtx.tone === 'danger' ? 'Xác nhận xoá' : 'OK'" @confirm="confirmCtx.action(); confirmOpen = false">
+      <p style="margin: 0; color: #4b5563">{{ confirmCtx.message }}</p>
     </AdminModal>
   </div>
 </template>
