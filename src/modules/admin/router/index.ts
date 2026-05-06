@@ -9,6 +9,7 @@ const routes: RouteRecordRaw[] = [
   // Hàng hóa
   { path: '/admin/products', name: 'admin-products', component: () => import('../views/ProductsView.vue'), meta: { ...adminMeta, title: 'Sản phẩm' } },
   { path: '/admin/categories', name: 'admin-categories', component: () => import('../views/CategoriesView.vue'), meta: { ...adminMeta, title: 'Danh mục' } },
+  { path: '/admin/product-comments', name: 'admin-product-comments', component: () => import('../views/ProductCommentsView.vue'), meta: { ...adminMeta, title: 'Bình luận sản phẩm' } },
   { path: '/admin/price-list', name: 'admin-price-list', component: () => import('../views/PriceListView.vue'), meta: { ...adminMeta, title: 'Thiết lập giá' } },
   { path: '/admin/sections', name: 'admin-sections', component: () => import('../views/ShopSectionsView.vue'), meta: { ...adminMeta, title: 'Khu vực hiển thị' } },
 
@@ -47,6 +48,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/admin/reports/finance', name: 'admin-report-finance', component: () => import('../views/ReportFinanceView.vue'), meta: { ...adminMeta, title: 'Báo cáo tài chính' } },
 
   // Hệ thống
+  { path: '/admin/activity-log', name: 'admin-activity-log', component: () => import('../views/ActivityLogView.vue'), meta: { ...adminMeta, title: 'Nhật ký hệ thống' } },
   { path: '/admin/settings', name: 'admin-settings', component: () => import('../views/SettingsView.vue'), meta: { ...adminMeta, title: 'Cài đặt' } },
 ]
 

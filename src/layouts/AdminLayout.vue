@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AdminToast from '@/modules/admin/components/AdminToast.vue'
+import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import { useAdminDataStore } from '@/modules/admin/stores/adminData'
 import { useToast } from '@/modules/admin/composables/useToast'
 
@@ -40,6 +41,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/admin/products', label: 'Sản phẩm', icon: 'ri-store-2-line' },
       { to: '/admin/categories', label: 'Danh mục', icon: 'ri-folder-line' },
+      { to: '/admin/product-comments', label: 'Bình luận', icon: 'ri-message-3-line' },
       { to: '/admin/sections', label: 'Khu vực hiển thị', icon: 'ri-layout-grid-line' },
       { to: '/admin/price-list', label: 'Thiết lập giá', icon: 'ri-price-tag-3-line' },
     ],
@@ -99,6 +101,7 @@ const navGroups: NavGroup[] = [
   {
     title: 'Hệ thống',
     items: [
+      { to: '/admin/activity-log', label: 'Nhật ký hệ thống', icon: 'ri-history-line' },
       { to: '/admin/settings', label: 'Cài đặt', icon: 'ri-settings-3-line' },
     ],
   },
@@ -228,7 +231,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
       </header>
 
       <main class="ym-admin__content">
-        <RouterView />
+        <ErrorBoundary>
+          <RouterView />
+        </ErrorBoundary>
       </main>
     </div>
     <AdminToast />

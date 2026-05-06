@@ -45,9 +45,9 @@ export function useImportedAs<T extends Record<string, any>>(
   const total = computed(() => Number(shop.stats.value?.total ?? items.value.length))
   const hasData = computed(() => items.value.length > 0)
 
-  async function refresh() {
+  async function refresh(opts: { force?: boolean } = {}) {
     try {
-      await shop.fetch({ all: 1 })
+      await shop.fetch({ all: 1 }, { force: !!opts.force })
       ready.value = true
     } catch {
       // bỏ qua
